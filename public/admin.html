@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - ROYAL BINGO</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            min-height: 100vh;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .admin-header {
+            background: #16213e;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .back-link {
+            color: #95a5a6;
+            text-decoration: none;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .back-link:hover {
+            color: #f39c12;
+        }
+
+        .main-container {
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .advanced-stats {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stats-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: #95a5a6;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 1rem;
+            border-radius: 5px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #f39c12;
+            color: #fff;
+        }
+
+        .tab-content {
+            display: none;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .tab-content.active {
+            display: grid;
+        }
+
+        .adv-stat-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .adv-stat-item h4 {
+            font-size: 0.8rem;
+            color: #95a5a6;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .adv-stat-item .adv-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .adv-stat-item .adv-value.income { color: #2ecc71; }
+        .adv-stat-item .adv-value.expense { color: #e74c3c; }
+        .adv-stat-item .adv-value.games { color: #3498db; }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        
+        .stat-card h3 {
+            font-size: 0.9rem;
+            color: #95a5a6;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .stat-card .value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #f39c12;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .action-card {
+            background: rgba(243, 156, 18, 0.1);
+            border: 1px solid rgba(243, 156, 18, 0.3);
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .action-card:hover {
+            background: rgba(243, 156, 18, 0.2);
+            transform: translateY(-5px);
+        }
+
+        .action-card i {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 15px;
+        }
+
+        .action-card h2 {
+            font-size: 1.5rem;
+            color: #f39c12;
+        }
+
+        /* Sub-screen overlay */
+        .sub-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #1a1a2e;
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sub-screen.active {
+            display: flex;
+        }
+
+        .sub-screen-header {
+            background: #16213e;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .close-sub-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .sub-content {
+            padding: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .section h2 {
+            color: #f39c12;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 1.3rem;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        th {
+            background: rgba(0, 0, 0, 0.3);
+            color: #95a5a6;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        .btn {
+            padding: 8px 14px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin: 2px;
+            transition: all 0.2s;
+            font-weight: 600;
+        }
+        
+        .btn-approve {
+            background: #27ae60;
+            color: white;
+        }
+        
+        .btn-reject {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .status {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-pending { background: rgba(243, 156, 18, 0.2); color: #f39c12; border: 1px solid rgba(243, 156, 18, 0.3); }
+        .status-confirmed, .status-approved { background: rgba(39, 174, 96, 0.2); color: #2ecc71; border: 1px solid rgba(39, 174, 96, 0.3); }
+        .status-rejected { background: rgba(231, 76, 60, 0.2); color: #e74c3c; border: 1px solid rgba(231, 76, 60, 0.3); }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #95a5a6;
+            font-style: italic;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #f39c12;
+        }
+
+        @media (max-width: 768px) {
+            .action-buttons {
+                grid-template-columns: 1fr;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-header">
+        <div class="header-left">
+            <a href="/" class="back-link">← ተመለስ</a>
+            <h1>🎯 Bingo Admin</h1>
+        </div>
+        <button class="btn btn-approve" style="background: #3498db" onclick="loadData()">🔄 አድስ (Refresh)</button>
+    </div>
+
+    <div class="main-container">
+        <!-- Advanced Stats Section -->
+        <div class="advanced-stats">
+            <h2 style="color: #f39c12; margin-bottom: 20px; font-size: 1.2rem;">📊 ዝርዝር ስታስቲክስ (Advanced Stats)</h2>
+            <div class="stats-tabs">
+                <button class="tab-btn active" onclick="switchTab('daily')">ዛሬ (Today)</button>
+                <button class="tab-btn" onclick="switchTab('weekly')">በዚህ ሳምንት</button>
+                <button class="tab-btn" onclick="switchTab('monthly')">በዚህ ወር</button>
+            </div>
+
+            <div id="daily-tab" class="tab-content active">
+                <div class="adv-stat-item">
+                    <h4>ጠቅላላ ገቢ (Income)</h4>
+                    <div class="adv-value income" id="dailyIncome">0 ብር</div>
+                </div>
+                <div class="adv-stat-item">
+                    <h4>ጠቅላላ ወጪ (Expense)</h4>
+                    <div class="adv-value expense" id="dailyExpense">0 ብር</div>
+                </div>
+                <div class="adv-stat-item">
+                    <h4>የተደረጉ ጨዋታዎች</h4>
+                    <div class="adv-value games" id="dailyGames">0</div>
+                </div>
+            </div>
+
+            <div id="weekly-tab" class="tab-content">
+                <div class="adv-stat-item">
+                    <h4>ጠቅላላ ገቢ (Income)</h4>
+                    <div class="adv-value income" id="weeklyIncome">0 ብር</div>
+                </div>
+                <div class="adv-stat-item">
+                    <h4>ጠቅላላ ወጪ (Expense)</h4>
+                    <div class="adv-value expense" id="weeklyExpense">0 ብር</div>
+                </div>
+                <div class="adv-stat-item">
+                    <h4>የተደረጉ ጨዋታዎች</h4>
+                    <div class="adv-value games" id="weeklyGames">0</div>
+                </div>
+            </div>
+
+            <div id="monthly-tab" class="tab-content">
+                <div class="adv-stat-item">
+                    <h4>ጠቅላላ ገቢ (Income)</h4>
+                    <div class="adv-value income" id="monthlyIncome">0 ብር</div>
+                </div>
+                <div class="adv-stat-item">
+                    <h4>ጠቅላላ ወጪ (Expense)</h4>
+                    <div class="adv-value expense" id="monthlyExpense">0 ብር</div>
+                </div>
+                <div class="adv-stat-item">
+                    <h4>የተደረጉ ጨዋታዎች</h4>
+                    <div class="adv-value games" id="monthlyGames">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Stats Section -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>አጠቃላይ ተጠቃሚ</h3>
+                <div class="value" id="totalUsers">-</div>
+            </div>
+            <div class="stat-card">
+                <h3>ጠቅላላ ተጫዋቾች (ዛሬ)</h3>
+                <div class="value" id="todayGames">-</div>
+            </div>
+        </div>
+
+        <!-- Main Action Buttons -->
+        <div class="action-buttons">
+            <div class="action-card" onclick="openSubScreen('deposits-screen')">
+                <i>💳</i>
+                <h2>የዲፖዚት ጥያቄዎች</h2>
+                <p id="pendingDepositsCount" style="color: #95a5a6; margin-top: 10px;">-</p>
+            </div>
+            <div class="action-card" onclick="openSubScreen('withdrawals-screen')">
+                <i>💸</i>
+                <h2>የዊዝድሮው ጥያቄዎች</h2>
+                <p id="pendingWithdrawalsCount" style="color: #95a5a6; margin-top: 10px;">-</p>
+            </div>
+            <div class="action-card" onclick="openSubScreen('broadcast-screen')">
+                <i>📢</i>
+                <h2>ብሮድካስት (Broadcast)</h2>
+                <p style="color: #95a5a6; margin-top: 10px;">ለሁሉም ተጠቃሚዎች መልእክት ይላኩ</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sub Screens -->
+    <div id="broadcast-screen" class="sub-screen">
+        <div class="sub-screen-header">
+            <button class="close-sub-btn" onclick="closeSubScreen('broadcast-screen')">← ተመለስ</button>
+            <h2>📢 ብሮድካስት (Broadcast)</h2>
+        </div>
+        <div class="sub-content">
+            <div class="section">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: #95a5a6; font-size: 0.9rem;">ምስል ይምረጡ (Choose Photo):</label>
+                    <input type="file" id="broadcastImageFile" accept="image/*" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.3); color: #fff; outline: none;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: #95a5a6; font-size: 0.9rem;">መልእክት (Message):</label>
+                    <textarea id="broadcastMessage" style="width: 100%; height: 150px; padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.3); color: #fff; font-size: 1rem; outline: none;" placeholder="መልእክትዎን እዚህ ያስገቡ..."></textarea>
+                </div>
+                <button class="btn btn-approve" style="width: 100%; padding: 15px; font-size: 1.1rem;" onclick="sendBroadcast()">መልእክት ላክ (Send)</button>
+                <div id="broadcastStatus" style="margin-top: 20px; text-align: center;"></div>
+            </div>
+        </div>
+    </div>
+    <div id="deposits-screen" class="sub-screen">
+        <div class="sub-screen-header">
+            <button class="close-sub-btn" onclick="closeSubScreen('deposits-screen')">← ተመለስ</button>
+            <h2>💳 የዲፖዚት ጥያቄዎች</h2>
+        </div>
+        <div class="sub-content">
+            <div class="section">
+                <div id="depositsTable">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="withdrawals-screen" class="sub-screen">
+        <div class="sub-screen-header">
+            <button class="close-sub-btn" onclick="closeSubScreen('withdrawals-screen')">← ተመለስ</button>
+            <h2>💸 የገንዘብ ማውጣት ጥያቄዎች</h2>
+        </div>
+        <div class="sub-content">
+            <div class="section">
+                <div id="withdrawalsTable">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function openSubScreen(id) {
+            document.getElementById(id).classList.add('active');
+            if (id === 'deposits-screen') loadDeposits();
+            if (id === 'withdrawals-screen') loadWithdrawals();
+        }
+
+        function closeSubScreen(id) {
+            document.getElementById(id).classList.remove('active');
+            loadData(); // Update counts on main screen
+        }
+
+        async function loadData() {
+            try {
+                // Load basic stats
+                const response = await fetch('/api/admin/stats');
+                const data = await response.json();
+                
+                document.getElementById('totalUsers').textContent = data.totalUsers || 0;
+                document.getElementById('todayGames').textContent = data.todayGames || 0;
+                
+                document.getElementById('pendingDepositsCount').textContent = (data.pendingDeposits || 0) + ' በመጠባበቅ ላይ';
+                document.getElementById('pendingWithdrawalsCount').textContent = (data.pendingWithdrawals || 0) + ' በመጠባበቅ ላይ';
+
+                // Load advanced stats
+                const advResponse = await fetch('/api/admin/advanced-stats');
+                const advData = await advResponse.json();
+                
+                // Update Daily
+                document.getElementById('dailyIncome').textContent = (advData.daily.income || 0).toFixed(2) + ' ብር';
+                document.getElementById('dailyExpense').textContent = (advData.daily.expense || 0).toFixed(2) + ' ብር';
+                document.getElementById('dailyGames').textContent = advData.daily.games || 0;
+
+                // Update Weekly
+                document.getElementById('weeklyIncome').textContent = (advData.weekly.income || 0).toFixed(2) + ' ብር';
+                document.getElementById('weeklyExpense').textContent = (advData.weekly.expense || 0).toFixed(2) + ' ብር';
+                document.getElementById('weeklyGames').textContent = advData.weekly.games || 0;
+
+                // Update Monthly
+                document.getElementById('monthlyIncome').textContent = (advData.monthly.income || 0).toFixed(2) + ' ብር';
+                document.getElementById('monthlyExpense').textContent = (advData.monthly.expense || 0).toFixed(2) + ' ብር';
+                document.getElementById('monthlyGames').textContent = advData.monthly.games || 0;
+
+            } catch (err) {
+                console.error('Failed to load stats:', err);
+            }
+        }
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + '-tab').classList.add('active');
+        }
+
+        window.onload = loadData;
+        
+        async function loadDeposits() {
+            try {
+                const response = await fetch('/api/admin/deposits');
+                const deposits = await response.json();
+                const container = document.getElementById('depositsTable');
+                
+                if (deposits.length === 0) {
+                    container.innerHTML = '<div class="empty-state">ዲፖዚቶች የሉም</div>';
+                    return;
+                }
+                
+                let html = `<table><tr><th>ID</th><th>ተጠቃሚ</th><th>መጠን</th><th>ዘዴ</th><th>ኮድ</th><th>ሁኔታ</th><th>ተግባር</th></tr>`;
+                for (const d of deposits) {
+                    const statusClass = d.status === 'pending' ? 'status-pending' : d.status === 'confirmed' ? 'status-confirmed' : 'status-rejected';
+                    html += `<tr>
+                        <td>${d.id}</td>
+                        <td>${d.username}</td>
+                        <td>${d.amount} ብር</td>
+                        <td>${d.payment_method}</td>
+                        <td>${d.confirmation_code}</td>
+                        <td><span class="status ${statusClass}">${d.status}</span></td>
+                        <td>
+                            ${d.status === 'pending' ? `
+                                <button class="btn btn-approve" onclick="approveDeposit(${d.id})">ፈቅድ</button>
+                                <button class="btn btn-reject" onclick="rejectDeposit(${d.id})">ውድቅ</button>
+                            ` : '-'}
+                        </td>
+                    </tr>`;
+                }
+                html += '</table>';
+                container.innerHTML = html;
+            } catch (err) {
+                document.getElementById('depositsTable').innerHTML = '<div class="empty-state">Error loading data</div>';
+            }
+        }
+        
+        async function loadWithdrawals() {
+            try {
+                const response = await fetch('/api/admin/withdrawals');
+                const withdrawals = await response.json();
+                const container = document.getElementById('withdrawalsTable');
+                
+                if (withdrawals.length === 0) {
+                    container.innerHTML = '<div class="empty-state">ማውጣቶች የሉም</div>';
+                    return;
+                }
+                
+                let html = `<table><tr><th>ID</th><th>ተጠቃሚ</th><th>መጠን</th><th>ስልክ</th><th>ስም</th><th>ሁኔታ</th><th>ተግባር</th></tr>`;
+                for (const w of withdrawals) {
+                    const statusClass = w.status === 'pending' ? 'status-pending' : w.status === 'approved' ? 'status-approved' : 'status-rejected';
+                    html += `<tr>
+                        <td>${w.id}</td>
+                        <td>${w.username}</td>
+                        <td>${w.amount} ብር</td>
+                        <td>${w.phone_number}</td>
+                        <td>${w.account_name}</td>
+                        <td><span class="status ${statusClass}">${w.status}</span></td>
+                        <td>
+                            ${w.status === 'pending' ? `
+                                <button class="btn btn-approve" onclick="approveWithdrawal(${w.id})">ፈቅድ</button>
+                                <button class="btn btn-reject" onclick="rejectWithdrawal(${w.id})">ውድቅ</button>
+                            ` : '-'}
+                        </td>
+                    </tr>`;
+                }
+                html += '</table>';
+                container.innerHTML = html;
+            } catch (err) {
+                document.getElementById('withdrawalsTable').innerHTML = '<div class="empty-state">Error loading data</div>';
+            }
+        }
+        
+        async function approveDeposit(id) {
+            if (!confirm('ይህን ዲፖዚት ለማፅደቅ እርግጠኛ ነዎት?')) return;
+            try {
+                const res = await fetch(`/api/admin/deposits/${id}/approve`, { method: 'POST' });
+                if (res.ok) loadDeposits();
+                else alert('ስህተት ተፈጥሯል');
+            } catch (err) { alert('Error: ' + err.message); }
+        }
+        
+        async function rejectDeposit(id) {
+            if (!confirm('ይህን ዲፖዚት ውድቅ ለማድረግ እርግጠኛ ነዎት?')) return;
+            try {
+                const res = await fetch(`/api/admin/deposits/${id}/reject`, { method: 'POST' });
+                if (res.ok) loadDeposits();
+                else alert('ስህተት ተፈጥሯል');
+            } catch (err) { alert('Error: ' + err.message); }
+        }
+        
+        async function approveWithdrawal(id) {
+            if (!confirm('ይህን ማውጣት ለማፅደቅ እርግጠኛ ነዎት?')) return;
+            try {
+                const res = await fetch(`/api/admin/withdrawals/${id}/approve`, { method: 'POST' });
+                if (res.ok) loadWithdrawals();
+                else alert('ስህተት ተፈጥሯል');
+            } catch (err) { alert('Error: ' + err.message); }
+        }
+        
+        async function rejectWithdrawal(id) {
+            if (!confirm('ይህን ማውጣት ውድቅ ለማድረግ እርግጠኛ ነዎት?')) return;
+            try {
+                const res = await fetch(`/api/admin/withdrawals/${id}/reject`, { method: 'POST' });
+                if (res.ok) loadWithdrawals();
+                else alert('ስህተት ተፈጥሯል');
+            } catch (err) { alert('Error: ' + err.message); }
+        }
+        async function sendBroadcast() {
+            const message = document.getElementById('broadcastMessage').value.trim();
+            const imageFile = document.getElementById('broadcastImageFile').files[0];
+            
+            if (!message && !imageFile) {
+                alert('እባክዎ መልእክት ያስገቡ ወይም ምስል ይምረጡ');
+                return;
+            }
+
+            if (!confirm('ይህ መልእክት ለሁሉም ተጠቃሚዎች ይላካል። እርግጠኛ ነዎት?')) return;
+
+            const statusDiv = document.getElementById('broadcastStatus');
+            statusDiv.innerHTML = '<div class="loading">በመላክ ላይ...</div>';
+            
+            const formData = new FormData();
+            formData.append('message', message);
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+
+            try {
+                const response = await fetch('/api/admin/broadcast', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    statusDiv.innerHTML = `<div style="color: #2ecc71">✅ መልእክቱ በተሳካ ሁኔታ ተልኳል!<br>የደረሳቸው: ${result.successCount} | ያልደረሳቸው: ${result.failCount}</div>`;
+                    document.getElementById('broadcastMessage').value = '';
+                    document.getElementById('broadcastImageFile').value = '';
+                } else {
+                    statusDiv.innerHTML = `<div style="color: #e74c3c">❌ ስህተት ተፈጥሯል: ${result.error}</div>`;
+                }
+            } catch (err) {
+                statusDiv.innerHTML = '<div style="color: #e74c3c">❌ ስህተት ተፈጥሯል</div>';
+            }
+        }
+    </script>
+</body>
+</html>

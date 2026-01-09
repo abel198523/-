@@ -1,0 +1,77 @@
+1
+
+
+
+Create the 'server.js' file using Node.js/Express. 
+
+
+
+1. Dependencies: Ensure 'express', 'body-parser', 'cors', and **'pg'** (for PostgreSQL connection to Neon) are used.
+
+2. Configuration: Set up Express, include the 'cors' middleware (app.use(cors())), and use the environment variable **'DATABASE_URL'** for the Neon connection string (const { Pool } = require('pg'); const pool = new Pool(...)).
+
+3. Root Endpoint: Serve 'index.html' on the '/' route.
+
+
+
+2
+
+
+
+In 'server.js', implement the following two API endpoints:
+
+
+
+A. POST endpoint at '/api/register': This receives 'userId' and 'phoneNumber' from the bot.
+
+   - Check if the user_id exists in the 'users' table.
+
+   - If NEW: **Insert** a new row with: user_id, phone_number, is_registered=TRUE, and set the **balance=10** (Welcome Bonus). Respond: { success: true, message: "Registration successful. 10 ETB welcome bonus added." }
+
+   - If EXISTS: Respond: { success: false, message: "User already registered." }
+
+
+
+B. GET endpoint at '/api/wallet/:userId':
+
+   - Queries the 'users' table for the user's 'balance'.
+
+   - Returns the user's balance and default stake information. If the user is not found, return a default balance of 0 and is_registered=FALSE.
+
+
+
+3
+
+
+
+Create the 'bot.js' file using 'node-telegram-bot-api'. Assume the 'TELEGRAM_BOT_TOKEN' and **'RENDER_SERVER_URL'** are available as environment variables.
+
+
+
+1. /start Handler: Display a keyboard with **'Register'** (using request_contact: true) and **'Play'** (using web_app to link to the RENDER_SERVER_URL/index.html).
+
+2. Contact Handler: When a contact message is received, extract 'userId' and 'phoneNumber'.
+
+3. Registration Request: Use 'fetch' to send a POST request with the 'userId' and 'phoneNumber' to the **'RENDER_SERVER_URL/api/register'** endpoint.
+
+4. Bot Response: Based on the server's response, confirm successful registration and the 10 ETB bonus, or inform the user they are already registered.
+
+
+
+4
+
+
+
+In the 'game.js' file, implement the following initialization sequence on DOMContentLoaded:
+
+
+
+1. User Identification: Get the **'userId'** safely from 'tg.initDataUnsafe.user.id'. If unsuccessful, use a mock ID like 999999. Store it globally as **'currentUserId'**.
+
+2. Wallet Load: Use 'fetch' to make a GET request to the server endpoint **'/api/wallet/currentUserId'** (using the actual ID).
+
+3. UI Update: Update the HTML element with id 'main-wallet-value' with the received 'balance'.
+
+4. Transaction Logic: Ensure the 'handleCardConfirmation' function is prepared to send a POST request to a future '/api/bet' endpoint to deduct the stake amount (using currentUserId and currentStake).
+
+4. Data Structure Note: Assume a **'users'** table exists in Neon with columns: **user_id** (BIGINT, PRIMARY KEY), **phone_number** (VARCHAR), **balance** (NUMERIC), and **is_registered** (BOOLEAN).
