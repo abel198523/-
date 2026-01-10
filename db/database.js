@@ -1,11 +1,12 @@
 const { Pool } = require('pg');
 const Redis = require('ioredis');
 const { Redis: UpstashRedis } = require('@upstash/redis');
+const dns = require('dns');
 
 // PostgreSQL Connection Pool
 // prioritized for Replit internal database if available
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL || process.env.EXTERNAL_DATABASE_URL,
+    connectionString: process.env.DATABASE_URL,
     ssl: { 
         rejectUnauthorized: false
     }, 
@@ -16,11 +17,8 @@ const pool = new Pool({
     keepaliveInitialDelayMillis: 10000
 });
 
-// Force IPv4 for external connections only if EXTERNAL_DATABASE_URL is used and prioritized
-if (!process.env.DATABASE_URL && process.env.EXTERNAL_DATABASE_URL) {
-    const dns = require('dns');
-    dns.setDefaultResultOrder('ipv4first');
-}
+// Force verbatim result order for Replit internal DB
+dns.setDefaultResultOrder('verbatim');
 
 // Redis Client logic with Upstash fallback support
 let redis = null;
