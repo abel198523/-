@@ -1746,6 +1746,7 @@ wss.on('connection', (ws) => {
         calledNumbers: gameState.calledNumbers,
         winner: gameState.winner,
         gameId: currentGameId,
+        participantsCount: getConfirmedPlayersCount(),
         takenCards: Array.from(gameState.players.values())
             .filter(p => p.isCardConfirmed && p.selectedCardId)
             .map(p => p.selectedCardId)

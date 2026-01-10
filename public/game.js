@@ -629,6 +629,35 @@ function updateWalletDisplay(balance) {
     }
 }
 
+function showGameInProgressOverlay(count) {
+    let overlay = document.getElementById('game-progress-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'game-progress-overlay';
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10001; color: white; text-align: center; padding: 20px; font-family: sans-serif;';
+        overlay.innerHTML = `
+            <h2 style="color: #ffcc00; margin-bottom: 15px;">ጨዋታ እየተካሄደ ነው</h2>
+            <p id="progress-player-count" style="font-size: 1.2em; margin-bottom: 25px;">${count} ተጫዋቾች እየተጫወቱ ነው</p>
+            <div style="display: flex; gap: 15px;">
+                <button id="watch-game-btn" style="padding: 12px 30px; background: #00c8ff; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer;">ተመልከት (Watch)</button>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        
+        document.getElementById('watch-game-btn').onclick = () => {
+            overlay.style.display = 'none';
+            const landing = document.getElementById('landing-screen');
+            const game = document.getElementById('game-screen');
+            if (landing) landing.style.display = 'none';
+            if (game) game.style.display = 'flex';
+        };
+    } else {
+        const countEl = document.getElementById('progress-player-count');
+        if (countEl) countEl.textContent = `${count} ተጫዋቾች እየተጫወቱ ነው`;
+        overlay.style.display = 'flex';
+    }
+}
+
 function initializeWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}`;
@@ -702,6 +731,11 @@ function handleWebSocketMessage(data) {
             updateTimerDisplay(data.timeLeft);
             updatePhaseDisplay(data.phase);
             renderMasterGrid();
+            
+            // Show overlay if game is already in progress
+            if (data.phase === 'game') {
+                showGameInProgressOverlay(data.participantsCount || 0);
+            }
             
             // Handle taken cards
             if (data.takenCards) {
