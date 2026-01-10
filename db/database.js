@@ -3,9 +3,9 @@ const Redis = require('ioredis');
 const { Redis: UpstashRedis } = require('@upstash/redis');
 
 // PostgreSQL Connection Pool
-// prioritized for external databases (Supabase, etc.)
+// prioritized for Replit internal database if available
 const pool = new Pool({
-    connectionString: process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL,
+    connectionString: process.env.DATABASE_URL || process.env.EXTERNAL_DATABASE_URL,
     ssl: { 
         rejectUnauthorized: false
     }, 
@@ -16,8 +16,8 @@ const pool = new Pool({
     keepaliveInitialDelayMillis: 10000
 });
 
-// Force IPv4 for external connections
-if (process.env.EXTERNAL_DATABASE_URL) {
+// Force IPv4 for external connections only if EXTERNAL_DATABASE_URL is used and prioritized
+if (!process.env.DATABASE_URL && process.env.EXTERNAL_DATABASE_URL) {
     const dns = require('dns');
     dns.setDefaultResultOrder('ipv4first');
 }
