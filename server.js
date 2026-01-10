@@ -1305,6 +1305,11 @@ bot.on('error', (error) => {
 // --- End of Telegram Bot Logic ---
 
 const server = http.createServer(app);
+// Start selection phase loop if not running
+// if (!global.gameLoopInterval) {
+//    global.gameLoopInterval = setInterval(gameLoop, 1000);
+// }
+
 const wss = new WebSocket.Server({ server });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chewatabingo-secret-key-change-in-production';
@@ -1406,18 +1411,18 @@ let playerIdCounter = 0;
 
 function initializeMasterNumbers() {
     gameState.masterNumbers = [];
-    for (let i = 1; i <= 75; i++) {
+    for (let i = 1; i <= 99; i++) {
         gameState.masterNumbers.push(i);
     }
     gameState.calledNumbers = [];
 }
 
 function getLetterForNumber(num) {
-    if (num >= 1 && num <= 15) return 'B';
-    if (num >= 16 && num <= 30) return 'I';
-    if (num >= 31 && num <= 45) return 'N';
-    if (num >= 46 && num <= 60) return 'G';
-    if (num >= 61 && num <= 75) return 'O';
+    if (num >= 1 && num <= 20) return 'B';
+    if (num >= 21 && num <= 40) return 'I';
+    if (num >= 41 && num <= 60) return 'N';
+    if (num >= 61 && num <= 80) return 'G';
+    if (num >= 81 && num <= 99) return 'O';
     return '';
 }
 
@@ -1672,23 +1677,13 @@ async function gameLoop() {
     
     // Selection phase logic
     if (gameState.phase === 'selection') {
-        gameState.timeLeft--;
+        // No timer decrement here as it's handled in the global 1s interval
         if (gameState.timeLeft % 5 === 0) syncGameStateToRedis();
-        
-        broadcast({
-            type: 'timer_update',
-            phase: 'selection',
-            timeLeft: gameState.timeLeft
-        });
         
         if (gameState.timeLeft <= 0) {
             const confirmedPlayers = getConfirmedPlayersCount();
-            if (confirmedPlayers >= 1) {
+            if (confirmedPlayers >= 2) {
                 console.log('--- Starting game phase with', confirmedPlayers, 'players ---');
-                // Ensure phase is set BEFORE calling startGamePhase
-                gameState.phase = 'game';
-                gameState.timeLeft = -1;
-                
                 startGamePhase();
                 
                 // Ensure number calling starts shortly after phase change
@@ -1698,7 +1693,7 @@ async function gameLoop() {
                     }
                 }, 1000);
             } else {
-                console.log('--- No players confirmed, restarting selection ---');
+                console.log('--- Not enough players confirmed, restarting selection ---');
                 startSelectionPhase();
             }
         }
