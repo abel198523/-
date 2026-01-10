@@ -985,10 +985,21 @@ function showGameStartNotification() {
 }
 
 function handlePhaseChange(data) {
+    console.log('--- Phase Change ---', data.phase);
+    currentPhase = data.phase;
+    
     const gameScreen = document.getElementById('game-screen');
     const selectionScreen = document.getElementById('selection-screen');
     const landingScreen = document.getElementById('landing-screen');
     const profileScreen = document.getElementById('profile-screen');
+    const walletScreen = document.getElementById('wallet-screen');
+    
+    // Hide all main screens
+    if (gameScreen) gameScreen.style.display = 'none';
+    if (selectionScreen) selectionScreen.style.display = 'none';
+    if (landingScreen) landingScreen.style.display = 'none';
+    if (profileScreen) profileScreen.style.display = 'none';
+    if (walletScreen) walletScreen.style.display = 'none';
     
     if (data.phase === 'selection') {
         // Clear previous game data
@@ -1002,10 +1013,6 @@ function handlePhaseChange(data) {
         const playerCells = document.querySelectorAll('.player-card-cell');
         playerCells.forEach(cell => cell.classList.remove('called', 'marked'));
         
-        // Ensure we are on selection screen
-        if (gameScreen) gameScreen.style.display = 'none';
-        if (landingScreen) landingScreen.style.display = 'none';
-        if (profileScreen) profileScreen.style.display = 'none';
         if (selectionScreen) {
             selectionScreen.style.display = 'flex';
             generateCardSelection();
@@ -1014,29 +1021,21 @@ function handlePhaseChange(data) {
         }
     } else if (data.phase === 'game') {
         showGameStartNotification();
-        // Game is starting - transition from selection to game for ALL players
-        if (selectionScreen) selectionScreen.style.display = 'none';
-        if (landingScreen) landingScreen.style.display = 'none';
-        if (profileScreen) profileScreen.style.display = 'none';
         if (gameScreen) {
             gameScreen.style.display = 'flex';
             if (selectedCardId) {
                 renderPlayerCard(selectedCardId);
-                // Update active tag with card ID
                 const activeTag = document.querySelector('.active-tag');
                 if (activeTag) {
                     activeTag.textContent = `የእርስዎ ካርድ #${selectedCardId}`;
                 }
-                // Hide "Wait For Next game" if player is in game
                 const gameStatusBox = document.querySelector('.game-status-box');
                 if (gameStatusBox) {
                     gameStatusBox.style.display = 'none';
                 }
             } else {
-                // For observers or late joiners
                 const cardContainer = document.getElementById('player-bingo-card');
                 if (cardContainer) cardContainer.innerHTML = '<div style="text-align:center; padding:20px; color:#aaa;">WATCHING ONLY</div>';
-                // Show "Wait For Next game" for observers
                 const gameStatusBox = document.querySelector('.game-status-box');
                 if (gameStatusBox) {
                     gameStatusBox.style.display = 'flex';
@@ -1049,6 +1048,7 @@ function handlePhaseChange(data) {
             showWinnerDisplay(data.winner);
         }
     }
+    updateBackButtonVisibility();
 }
 
 function showBingoError(message) {

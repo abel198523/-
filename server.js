@@ -1638,12 +1638,12 @@ setInterval(() => {
 
         if (gameState.timeLeft <= 0) {
             const confirmedPlayers = getConfirmedPlayersCount();
-            if (confirmedPlayers >= 2) {
+            if (confirmedPlayers >= 1) {
                 console.log('Selection phase ended. Starting game with ' + confirmedPlayers + ' players.');
                 startGamePhase();
                 startNumberCalling();
             } else {
-                console.log('Not enough players (needs 2). Resetting selection timer.');
+                console.log('Not enough players (needs 1). Resetting selection timer.');
                 gameState.timeLeft = SELECTION_TIME;
                 broadcast({
                     type: 'timer_update',
