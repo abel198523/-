@@ -24,22 +24,13 @@ const Wallet = require('./models/Wallet');
 const Game = require('./models/Game');
 const { validateBingo } = require('./data/cards');
 
-const pool = new Pool({
-    connectionString: process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL,
-    ssl: { 
-        rejectUnauthorized: false
-    },
-    keepalive: true,
-    connectionTimeoutMillis: 30000,
-    idleTimeoutMillis: 30000,
-    max: 20
-});
+// Replace all instances of db.query with db.query to use the correct database connection
+// and ensure the pool is not re-declared in server.js
+const pool = db.pool;
 
-// Force IPv4 for external connections if URL contains hostname
-if (process.env.EXTERNAL_DATABASE_URL && !process.env.EXTERNAL_DATABASE_URL.includes(':::')) {
-    const dns = require('dns');
-    dns.setDefaultResultOrder('ipv4first');
-}
+// Force verbatim result order for Replit internal DB
+const dns = require('dns');
+dns.setDefaultResultOrder('verbatim');
 
 const app = express();
 
@@ -82,13 +73,6 @@ const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, {
     }
 });
 
-// Catch-all for any message to debug
-bot.on('message', (msg) => {
-    console.log('--- Received ANY message ---');
-    console.log('Text:', msg.text);
-    console.log('From:', msg.from.id);
-});
-
 // Explicitly delete webhook to ensure polling works
 bot.deleteWebHook().then(() => {
     console.log("Webhook deleted, starting polling...");
@@ -96,13 +80,12 @@ bot.deleteWebHook().then(() => {
     console.warn("Failed to delete webhook:", err.message);
 });
 
-bot.on('polling_error', (error) => {
-    if (error.code === 'ETELEGRAM' && error.message.includes('409 Conflict')) {
-        console.warn("Polling conflict detected. Another instance might be running.");
-    } else {
-        console.error("Polling error:", error.code, error.message);
-    }
-});
+// Catch-all for any message to debug
+// bot.on('message', (msg) => {
+//     console.log('--- Received ANY message ---');
+//     console.log('Text:', msg.text);
+//     console.log('From:', msg.from.id);
+// });
 
 bot.getMe().then((botInfo) => {
     console.log("Bot running in Polling mode.");
@@ -134,9 +117,6 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
     const referralCode = match ? match[1] : null;
 
     try {
-        console.log('--- Received /start command ---');
-        console.log('From User ID:', msg.from.id);
-        
         // Simple immediate response to verify receipt
         try {
             await bot.sendMessage(chatId, "እንኳን ደህና መጡ! ጥያቄዎን እያስተናገድኩ ነው...");
@@ -148,7 +128,7 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
         let isRegistered = false;
         let userId = null;
         try {
-            const result = await pool.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId.toString()]);
+            const result = await db.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId.toString()]);
             isRegistered = result.rows.length > 0;
             if (isRegistered) userId = result.rows[0].id;
         } catch (dbErr) {
@@ -158,13 +138,16 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
         
         console.log('User registration status:', isRegistered);
 
-        const miniAppUrlWithId = MINI_APP_URL ? `${MINI_APP_URL}?tg_id=${telegramId}` : null;
-        
         if (isRegistered) {
             await bot.sendMessage(chatId, "እንኳን ደህና መጡ! ጨዋታውን ለመጀመር 'Play' የሚለውን ቁልፍ ይጫኑ።", {
                 reply_markup: getMainKeyboard(telegramId)
             });
         } else {
+            // Save referral code in state if present
+            if (referralCode) {
+                userStates.set(telegramId, { action: 'register', referredBy: referralCode });
+            }
+
             await bot.sendMessage(chatId, "እንኳን ደህና መጡ ወደ ROYAL BINGO! 🎉\n\nጨዋታውን ለመጀመር እባክዎ መጀመሪያ ይመዝገቡ።", {
                 reply_markup: {
                     keyboard: [
@@ -177,9 +160,8 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
         }
     } catch (err) {
         console.error('CRITICAL: Error in /start command handler:', err);
-        console.error('Stack trace:', err.stack);
         try {
-            await bot.sendMessage(chatId, "ይቅርታ፣ ችግር ተፈጥሯል። እባክዎ ጥቂት ቆይተው ይሞክሩ።\nError: " + err.message);
+            await bot.sendMessage(chatId, "ይቅርታ፣ ችግር ተፈጥሯል። እባክዎ ጥቂት ቆይተው ይሞክሩ።");
         } catch (sendErr) {
             console.error('Failed to send error message to user:', sendErr.message);
         }
@@ -202,7 +184,7 @@ bot.on('contact', async (msg) => {
     
     try {
         // Check if already registered
-        const existingUser = await pool.query('SELECT * FROM users WHERE telegram_id = $1', [senderId.toString()]);
+        const existingUser = await db.query('SELECT * FROM users WHERE telegram_id = $1', [senderId.toString()]);
         
         if (existingUser.rows.length > 0) {
             console.log(`User ${senderId} already registered. Showing keyboard.`);
@@ -221,7 +203,7 @@ bot.on('contact', async (msg) => {
         console.log(`Attempting to register user: ${senderId}, Phone: ${phoneNumber}, Referrer: ${referrerId}`);
         
         // Ensure referrals table exists by using a sub-query or checking for column
-        const userResult = await pool.query(
+        const userResult = await db.query(
             'INSERT INTO users (telegram_id, username, phone_number, is_registered) VALUES ($1, $2, $3, $4) RETURNING id',
             [senderId.toString(), username, phoneNumber, true]
         );
@@ -232,7 +214,7 @@ bot.on('contact', async (msg) => {
         const userId = userResult.rows[0].id;
 
         // Create wallet with 20 ETB bonus
-        await pool.query(
+        await db.query(
             'INSERT INTO wallets (user_id, balance) VALUES ($1, $2)',
             [userId, 20.00]
         );
@@ -242,11 +224,11 @@ bot.on('contact', async (msg) => {
             const bonusAmount = 2.00;
             // Ensure referrals table exists and handle bonus
             try {
-                await pool.query('INSERT INTO referrals (referrer_id, referred_id, bonus_amount) VALUES ($1, $2, $3)', [referrerId, userId, bonusAmount]);
-                await pool.query('UPDATE wallets SET balance = balance + $1 WHERE user_id = $2', [bonusAmount, referrerId]);
+                await db.query('INSERT INTO referrals (referrer_id, referred_id, bonus_amount) VALUES ($1, $2, $3)', [referrerId, userId, bonusAmount]);
+                await db.query('UPDATE wallets SET balance = balance + $1 WHERE user_id = $2', [bonusAmount, referrerId]);
                 
                 // Notify referrer
-                const referrerInfo = await pool.query('SELECT telegram_id FROM users WHERE id = $1', [referrerId]);
+                const referrerInfo = await db.query('SELECT telegram_id FROM users WHERE id = $1', [referrerId]);
                 if (referrerInfo.rows.length > 0) {
                     bot.sendMessage(referrerInfo.rows[0].telegram_id.toString(), `🎁 አዲስ ሰው በሊንክዎ ስለተመዘገበ የ ${bonusAmount} ብር ቦነስ አግኝተዋል!`);
                 }
@@ -274,7 +256,7 @@ bot.onText(/💰 Check Balance/, async (msg) => {
     const telegramId = msg.from.id;
     
     try {
-        const result = await pool.query(
+        const result = await db.query(
             'SELECT w.balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
             [telegramId.toString()]
         );
@@ -338,7 +320,7 @@ async function notifyAdmin(message, options = {}) {
     
     // Also notify any registered active admins
     try {
-        const activeAdmins = await pool.query('SELECT telegram_id FROM admin_users WHERE is_active = true');
+        const activeAdmins = await db.query('SELECT telegram_id FROM admin_users WHERE is_active = true');
         for (const admin of activeAdmins.rows) {
             if (admin.telegram_id !== ADMIN_CHAT_ID) {
                 await bot.sendMessage(admin.telegram_id, message, finalOptions);
@@ -352,7 +334,7 @@ async function notifyAdmin(message, options = {}) {
 // Helper to check withdrawal eligibility
 async function checkWithdrawEligibility(telegramId) {
     try {
-        const userResult = await pool.query(
+        const userResult = await db.query(
             'SELECT u.id FROM users u WHERE u.telegram_id = $1',
             [telegramId.toString()]
         );
@@ -364,7 +346,7 @@ async function checkWithdrawEligibility(telegramId) {
         const userId = userResult.rows[0].id;
         
         // Check total confirmed deposits
-        const depositResult = await pool.query(
+        const depositResult = await db.query(
             'SELECT COALESCE(SUM(amount), 0) as total_amount, COUNT(*) as count FROM deposits WHERE user_id = $1 AND status = $2',
             [userId, 'confirmed']
         );
@@ -373,7 +355,7 @@ async function checkWithdrawEligibility(telegramId) {
         const deposits = parseInt(depositResult.rows[0].count);
 
         // Check total wins
-        const winCount = await pool.query(
+        const winCount = await db.query(
             'SELECT COUNT(*) as count FROM game_participants WHERE user_id = $1 AND is_winner = true',
             [userId]
         );
@@ -425,7 +407,7 @@ bot.onText(/💸 Withdraw/, async (msg) => {
     const telegramId = msg.from.id;
     
     try {
-        const balanceResult = await pool.query(
+        const balanceResult = await db.query(
             'SELECT w.balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
             [telegramId.toString()]
         );
@@ -491,7 +473,7 @@ bot.onText(/💳 Deposit/, async (msg) => {
     const telegramId = msg.from.id;
     
     try {
-        const userResult = await pool.query(
+        const userResult = await db.query(
             'SELECT id FROM users WHERE telegram_id = $1',
             [telegramId.toString()]
         );
@@ -603,7 +585,7 @@ bot.on('message', async (msg) => {
                 return;
             }
             
-            const balanceResult = await pool.query(
+            const balanceResult = await db.query(
                 'SELECT w.balance FROM wallets w JOIN users u ON w.user_id = u.id WHERE u.telegram_id = $1',
                 [telegramId.toString()]
             );
@@ -629,12 +611,12 @@ bot.on('message', async (msg) => {
             state.accountName = text;
             
             try {
-                await pool.query(
+                await db.query(
                     'INSERT INTO withdrawals (user_id, amount, phone_number, account_name, status) VALUES ($1, $2, $3, $4, $5)',
                     [state.userId, state.amount, state.phone, state.accountName, 'pending']
                 );
                 
-                const userResult = await pool.query(
+                const userResult = await db.query(
                     'SELECT username FROM users WHERE id = $1',
                     [state.userId]
                 );
@@ -739,7 +721,7 @@ bot.on('message', async (msg) => {
 
                 // Step 2: Check for ANY existing record with this code (prevent duplicates)
                 console.log(`Checking existing deposit for code: ${finalCode}, normalized: ${normalizedInputCode}`);
-                const existingCheck = await pool.query(
+                const existingCheck = await db.query(
                     `SELECT * FROM deposits 
                      WHERE (
                         confirmation_code = $1 
@@ -761,16 +743,16 @@ bot.on('message', async (msg) => {
                     
                     if (existing.status === 'unmatched') {
                         // Match found! Auto-approve
-                        await pool.query('BEGIN');
-                        await pool.query(
+                        await db.query('BEGIN');
+                        await db.query(
                             'UPDATE wallets SET balance = balance + $1 WHERE user_id = $2',
                             [existing.amount, state.userId]
                         );
-                        await pool.query(
+                        await db.query(
                             'UPDATE deposits SET user_id = $1, status = $2, confirmed_at = NOW() WHERE id = $3',
                             [state.userId, 'confirmed', existing.id]
                         );
-                        await pool.query('COMMIT');
+                        await db.query('COMMIT');
 
                         userStates.delete(telegramId);
                         await bot.sendMessage(chatId, 
@@ -787,12 +769,12 @@ bot.on('message', async (msg) => {
                 }
 
                 // If no record exists, save as pending for admin approval (or until SMS arrives)
-                await pool.query(
+                await db.query(
                     'INSERT INTO deposits (user_id, amount, payment_method, confirmation_code, status) VALUES ($1, $2, $3, $4, $5)',
                     [state.userId, state.amount, state.paymentMethod, rawText, 'pending']
                 );
                 
-                const userResult = await pool.query(
+                const userResult = await db.query(
                     'SELECT username FROM users WHERE id = $1',
                     [state.userId]
                 );
@@ -840,7 +822,7 @@ bot.onText(/\/setadmin/, async (msg) => {
     const telegramId = msg.from.id.toString();
     
     try {
-        await pool.query(
+        await db.query(
             'INSERT INTO admin_users (telegram_id, username) VALUES ($1, $2) ON CONFLICT (telegram_id) DO UPDATE SET is_active = true',
             [telegramId, msg.from.username || 'Admin']
         );
@@ -859,7 +841,7 @@ bot.onText(/\/pending/, async (msg) => {
     const telegramId = msg.from.id.toString();
     
     try {
-        const adminCheck = await pool.query(
+        const adminCheck = await db.query(
             'SELECT * FROM admin_users WHERE telegram_id = $1 AND is_active = true',
             [telegramId]
         );
@@ -869,7 +851,7 @@ bot.onText(/\/pending/, async (msg) => {
             return;
         }
         
-        const pendingDeposits = await pool.query(`
+        const pendingDeposits = await db.query(`
             SELECT d.id, d.amount, d.payment_method, d.confirmation_code, d.created_at, u.username, u.id as user_id
             FROM deposits d
             JOIN users u ON d.user_id = u.id
@@ -878,7 +860,7 @@ bot.onText(/\/pending/, async (msg) => {
             LIMIT 5
         `);
         
-        const pendingWithdrawals = await pool.query(`
+        const pendingWithdrawals = await db.query(`
             SELECT w.id, w.amount, w.phone_number, w.account_name, w.created_at, u.username, u.id as user_id
             FROM withdrawals w
             JOIN users u ON w.user_id = u.id
@@ -948,7 +930,7 @@ bot.onText(/\/approve_deposit (\d+)/, async (msg, match) => {
     const depositId = parseInt(match[1]);
     
     try {
-        const adminCheck = await pool.query(
+        const adminCheck = await db.query(
             'SELECT * FROM admin_users WHERE telegram_id = $1 AND is_active = true',
             [telegramId]
         );
@@ -958,7 +940,7 @@ bot.onText(/\/approve_deposit (\d+)/, async (msg, match) => {
             return;
         }
         
-        const deposit = await pool.query(
+        const deposit = await db.query(
             'SELECT d.*, u.telegram_id as user_telegram_id FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = $1',
             [depositId]
         );
@@ -975,14 +957,14 @@ bot.onText(/\/approve_deposit (\d+)/, async (msg, match) => {
             return;
         }
         
-        await pool.query('UPDATE deposits SET status = $1, confirmed_at = NOW() WHERE id = $2', ['confirmed', depositId]);
+        await db.query('UPDATE deposits SET status = $1, confirmed_at = NOW() WHERE id = $2', ['confirmed', depositId]);
         
-        await pool.query(
+        await db.query(
             'UPDATE wallets SET balance = balance + $1, updated_at = NOW() WHERE user_id = $2',
             [d.amount, d.user_id]
         );
         
-        await pool.query(
+        await db.query(
             'INSERT INTO transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
             [d.user_id, 'deposit', d.amount, `Deposit via ${d.payment_method}`]
         );
@@ -1007,7 +989,7 @@ bot.onText(/\/reject_deposit (\d+)/, async (msg, match) => {
     const depositId = parseInt(match[1]);
     
     try {
-        const adminCheck = await pool.query(
+        const adminCheck = await db.query(
             'SELECT * FROM admin_users WHERE telegram_id = $1 AND is_active = true',
             [telegramId]
         );
@@ -1017,7 +999,7 @@ bot.onText(/\/reject_deposit (\d+)/, async (msg, match) => {
             return;
         }
         
-        const deposit = await pool.query(
+        const deposit = await db.query(
             'SELECT d.*, u.telegram_id as user_telegram_id FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = $1',
             [depositId]
         );
@@ -1029,7 +1011,7 @@ bot.onText(/\/reject_deposit (\d+)/, async (msg, match) => {
         
         const d = deposit.rows[0];
         
-        await pool.query('UPDATE deposits SET status = $1 WHERE id = $2', ['rejected', depositId]);
+        await db.query('UPDATE deposits SET status = $1 WHERE id = $2', ['rejected', depositId]);
         
         await bot.sendMessage(chatId, `❌ ዲፖዚት #${depositId} ተቀባይነት አላገኘም።`);
         
@@ -1051,7 +1033,7 @@ bot.onText(/\/approve_withdraw (\d+)/, async (msg, match) => {
     const withdrawalId = parseInt(match[1]);
     
     try {
-        const adminCheck = await pool.query(
+        const adminCheck = await db.query(
             'SELECT * FROM admin_users WHERE telegram_id = $1 AND is_active = true',
             [telegramId]
         );
@@ -1061,7 +1043,7 @@ bot.onText(/\/approve_withdraw (\d+)/, async (msg, match) => {
             return;
         }
         
-        const withdrawal = await pool.query(
+        const withdrawal = await db.query(
             'SELECT w.*, u.telegram_id as user_telegram_id FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.id = $1',
             [withdrawalId]
         );
@@ -1078,7 +1060,7 @@ bot.onText(/\/approve_withdraw (\d+)/, async (msg, match) => {
             return;
         }
         
-        const balanceCheck = await pool.query(
+        const balanceCheck = await db.query(
             'SELECT balance FROM wallets WHERE user_id = $1',
             [w.user_id]
         );
@@ -1088,14 +1070,14 @@ bot.onText(/\/approve_withdraw (\d+)/, async (msg, match) => {
             return;
         }
         
-        await pool.query('UPDATE withdrawals SET status = $1, processed_at = NOW() WHERE id = $2', ['approved', withdrawalId]);
+        await db.query('UPDATE withdrawals SET status = $1, processed_at = NOW() WHERE id = $2', ['approved', withdrawalId]);
         
-        await pool.query(
+        await db.query(
             'UPDATE wallets SET balance = balance - $1, updated_at = NOW() WHERE user_id = $2',
             [w.amount, w.user_id]
         );
         
-        await pool.query(
+        await db.query(
             'INSERT INTO transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
             [w.user_id, 'withdrawal', w.amount, `Withdrawal to ${w.phone_number}`]
         );
@@ -1120,7 +1102,7 @@ bot.onText(/\/reject_withdraw (\d+)/, async (msg, match) => {
     const withdrawalId = parseInt(match[1]);
     
     try {
-        const adminCheck = await pool.query(
+        const adminCheck = await db.query(
             'SELECT * FROM admin_users WHERE telegram_id = $1 AND is_active = true',
             [telegramId]
         );
@@ -1130,7 +1112,7 @@ bot.onText(/\/reject_withdraw (\d+)/, async (msg, match) => {
             return;
         }
         
-        const withdrawal = await pool.query(
+        const withdrawal = await db.query(
             'SELECT w.*, u.telegram_id as user_telegram_id FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.id = $1',
             [withdrawalId]
         );
@@ -1142,7 +1124,7 @@ bot.onText(/\/reject_withdraw (\d+)/, async (msg, match) => {
         
         const w = withdrawal.rows[0];
         
-        await pool.query('UPDATE withdrawals SET status = $1, processed_at = NOW() WHERE id = $2', ['rejected', withdrawalId]);
+        await db.query('UPDATE withdrawals SET status = $1, processed_at = NOW() WHERE id = $2', ['rejected', withdrawalId]);
         
         await bot.sendMessage(chatId, `❌ ማውጣት #${withdrawalId} ተቀባይነት አላገኘም።`);
         
@@ -1168,7 +1150,7 @@ bot.on('callback_query', async (callbackQuery) => {
 
     try {
         // Verify admin
-        const adminCheck = await pool.query(
+        const adminCheck = await db.query(
             'SELECT * FROM admin_users WHERE telegram_id = $1 AND is_active = true',
             [adminTelegramId]
         );
@@ -1186,7 +1168,7 @@ bot.on('callback_query', async (callbackQuery) => {
             const depositId = data.replace('approve_dep_id_', '');
             console.log(`Bot approving deposit: ${depositId}`);
             
-            const deposit = await pool.query(
+            const deposit = await db.query(
                 'SELECT d.*, u.telegram_id as user_telegram_id FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = $1',
                 [depositId]
             );
@@ -1197,7 +1179,7 @@ bot.on('callback_query', async (callbackQuery) => {
             }
 
             const d = deposit.rows[0];
-            const client = await pool.connect();
+            const client = await db.db.db.pool.connect();
             try {
                 await client.query('BEGIN');
                 await client.query('UPDATE deposits SET status = $1, confirmed_at = NOW() WHERE id = $2', ['confirmed', depositId]);
@@ -1230,7 +1212,7 @@ bot.on('callback_query', async (callbackQuery) => {
             const depositId = data.replace('reject_dep_id_', '');
             console.log(`Bot rejecting deposit: ${depositId}`);
             
-            const deposit = await pool.query('SELECT d.*, u.telegram_id as user_telegram_id FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = $1', [depositId]);
+            const deposit = await db.query('SELECT d.*, u.telegram_id as user_telegram_id FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = $1', [depositId]);
             
             if (deposit.rows.length === 0 || deposit.rows[0].status !== 'pending') {
                 await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ አልተገኘም።' });
@@ -1238,7 +1220,7 @@ bot.on('callback_query', async (callbackQuery) => {
             }
 
             const d = deposit.rows[0];
-            await pool.query('UPDATE deposits SET status = $1 WHERE id = $2', ['rejected', depositId]);
+            await db.query('UPDATE deposits SET status = $1 WHERE id = $2', ['rejected', depositId]);
 
             await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ ዲፖዚቱ ውድቅ ተደርጓል!' });
             const formattedText = message.text.replace(/💳 ዲፖዚት ጥያቄ/g, '❌ <b>ዲፖዚት ጥያቄ (ውድቅ ተደርጓል)</b>');
@@ -1258,7 +1240,7 @@ bot.on('callback_query', async (callbackQuery) => {
             const withdrawalId = data.replace('approve_with_id_', '');
             console.log(`Bot approving withdrawal: ${withdrawalId}`);
             
-            const withdrawal = await pool.query('SELECT w.*, u.telegram_id as user_telegram_id FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.id = $1', [withdrawalId]);
+            const withdrawal = await db.query('SELECT w.*, u.telegram_id as user_telegram_id FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.id = $1', [withdrawalId]);
             
             if (withdrawal.rows.length === 0 || withdrawal.rows[0].status !== 'pending') {
                 await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ አልተገኘም ወይም ቀድሞ ተፈጽሟል።' });
@@ -1266,14 +1248,14 @@ bot.on('callback_query', async (callbackQuery) => {
             }
 
             const w = withdrawal.rows[0];
-            const balanceCheck = await pool.query('SELECT balance FROM wallets WHERE user_id = $1', [w.user_id]);
+            const balanceCheck = await db.query('SELECT balance FROM wallets WHERE user_id = $1', [w.user_id]);
             
             if (parseFloat(balanceCheck.rows[0]?.balance || 0) < w.amount) {
                 await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ ተጠቃሚው በቂ ሒሳብ የለውም።', show_alert: true });
                 return;
             }
 
-            const client = await pool.connect();
+            const client = await db.db.db.pool.connect();
             try {
                 await client.query('BEGIN');
                 await client.query('UPDATE withdrawals SET status = $1, processed_at = NOW() WHERE id = $2', ['approved', withdrawalId]);
@@ -1305,7 +1287,7 @@ bot.on('callback_query', async (callbackQuery) => {
             const withdrawalId = data.replace('reject_with_id_', '');
             console.log(`Bot rejecting withdrawal: ${withdrawalId}`);
             
-            const withdrawal = await pool.query('SELECT w.*, u.telegram_id as user_telegram_id FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.id = $1', [withdrawalId]);
+            const withdrawal = await db.query('SELECT w.*, u.telegram_id as user_telegram_id FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.id = $1', [withdrawalId]);
             
             if (withdrawal.rows.length === 0 || withdrawal.rows[0].status !== 'pending') {
                 await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ አልተገኘም።' });
@@ -1313,7 +1295,7 @@ bot.on('callback_query', async (callbackQuery) => {
             }
 
             const w = withdrawal.rows[0];
-            await pool.query('UPDATE withdrawals SET status = $1, processed_at = NOW() WHERE id = $2', ['rejected', withdrawalId]);
+            await db.query('UPDATE withdrawals SET status = $1, processed_at = NOW() WHERE id = $2', ['rejected', withdrawalId]);
 
             await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ ማውጣቱ ውድቅ ተደርጓል!' });
             const formattedText = message.text.replace(/💸 ማውጣት ጥያቄ/g, '❌ <b>ማውጣት ጥያቄ (ውድቅ ተደርጓል)</b>');
@@ -2120,7 +2102,7 @@ app.post('/api/register', async (req, res) => {
 
         const telegramId = parseInt(userId) || 0;
         
-        const existingUser = await pool.query(
+        const existingUser = await db.query(
             'SELECT * FROM users WHERE telegram_id = $1',
             [telegramId]
         );
@@ -2130,7 +2112,7 @@ app.post('/api/register', async (req, res) => {
         }
 
         const username = 'Player_' + telegramId;
-        const userResult = await pool.query(
+        const userResult = await db.query(
             `INSERT INTO users (telegram_id, username, phone_number, is_registered) 
              VALUES ($1, $2, $3, TRUE) RETURNING id`,
             [telegramId, username, phoneNumber]
@@ -2138,7 +2120,7 @@ app.post('/api/register', async (req, res) => {
 
         const newUserId = userResult.rows[0].id;
         
-        await pool.query(
+        await db.query(
             `INSERT INTO wallets (user_id, balance, currency) 
              VALUES ($1, 10.00, 'ETB')`,
             [newUserId]
@@ -2156,7 +2138,7 @@ app.get('/api/check-registration/:telegramId', async (req, res) => {
         const { telegramId } = req.params;
         const tgId = parseInt(telegramId) || 0;
         
-        const result = await pool.query(
+        const result = await db.query(
             'SELECT id, is_registered FROM users WHERE telegram_id = $1',
             [tgId]
         );
@@ -2177,7 +2159,7 @@ app.get('/api/profile/:telegramId', async (req, res) => {
         const { telegramId } = req.params;
         const tgId = parseInt(telegramId) || 0;
         
-        const userResult = await pool.query(
+        const userResult = await db.query(
             `SELECT u.id, u.username, u.telegram_id, u.phone_number, u.is_registered, u.created_at, w.balance 
              FROM users u 
              LEFT JOIN wallets w ON u.id = w.user_id 
@@ -2191,12 +2173,12 @@ app.get('/api/profile/:telegramId', async (req, res) => {
 
         const user = userResult.rows[0];
         
-        const gamesResult = await pool.query(
+        const gamesResult = await db.query(
             `SELECT COUNT(*) as total_games FROM game_participants WHERE user_id = $1`,
             [user.id]
         );
         
-        const winsResult = await pool.query(
+        const winsResult = await db.query(
             `SELECT COUNT(*) as wins FROM games WHERE winner_id = $1`,
             [user.id]
         );
@@ -2222,7 +2204,7 @@ app.get('/api/profile/:telegramId', async (req, res) => {
 app.get('/api/check-admin/:telegramId', async (req, res) => {
     try {
         const { telegramId } = req.params;
-        const result = await pool.query(
+        const result = await db.query(
             'SELECT * FROM admin_users WHERE telegram_id = $1 AND is_active = true',
             [telegramId]
         );
@@ -2239,7 +2221,7 @@ app.get('/api/wallet/:userId', async (req, res) => {
         const { userId } = req.params;
         const tgId = parseInt(userId);
         
-        const result = await pool.query(
+        const result = await db.query(
             'SELECT w.balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
             [tgId]
         );
@@ -2260,7 +2242,7 @@ app.get('/api/transactions/:userId', async (req, res) => {
         const { userId } = req.params;
         const tgId = parseInt(userId);
         
-        const userResult = await pool.query('SELECT id FROM users WHERE telegram_id = $1', [tgId]);
+        const userResult = await db.query('SELECT id FROM users WHERE telegram_id = $1', [tgId]);
         if (userResult.rows.length === 0) {
             return res.json({ transactions: [] });
         }
@@ -2268,12 +2250,12 @@ app.get('/api/transactions/:userId', async (req, res) => {
         const dbUserId = userResult.rows[0].id;
         
         // Fetch combined history of deposits and withdrawals
-        const deposits = await pool.query(
+        const deposits = await db.query(
             "SELECT 'deposit' as type, amount, status, created_at FROM deposits WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10",
             [dbUserId]
         );
         
-        const withdrawals = await pool.query(
+        const withdrawals = await db.query(
             "SELECT 'withdrawal' as type, amount, status, created_at FROM withdrawals WHERE user_id = $1 ORDER BY created_at DESC LIMIT 10",
             [dbUserId]
         );
@@ -2294,7 +2276,7 @@ app.get('/api/wallet-info/:userId', async (req, res) => {
         const { userId } = req.params;
         const telegramId = parseInt(userId) || 0;
         
-        const result = await pool.query(
+        const result = await db.query(
             `SELECT u.id, u.is_registered, w.balance 
              FROM users u 
              LEFT JOIN wallets w ON u.id = w.user_id 
@@ -2332,7 +2314,7 @@ app.post('/api/bet', async (req, res) => {
 
         const telegramId = parseInt(userId) || 0;
 
-        const userResult = await pool.query(
+        const userResult = await db.query(
             'SELECT u.id, w.balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
             [telegramId]
         );
@@ -2350,7 +2332,7 @@ app.post('/api/bet', async (req, res) => {
 
         const newBalance = currentBalance - stakeAmount;
         
-        await pool.query(
+        await db.query(
             'UPDATE wallets SET balance = $1 WHERE user_id = $2',
             [newBalance, internalUserId]
         );
@@ -2416,7 +2398,7 @@ app.post('/telebirr-webhook', async (req, res) => {
         const normalizedTxId = transactionId.replace(/[^A-Z0-9]/gi, '').toUpperCase();
 
         // Step 2: Prevent duplicate confirmations
-        const existingRecord = await pool.query(
+        const existingRecord = await db.query(
             `SELECT * FROM deposits 
              WHERE (
                 confirmation_code = $1 
@@ -2435,18 +2417,18 @@ app.post('/telebirr-webhook', async (req, res) => {
 
             if (existing.status === 'pending') {
                 // User already sent the code, now we have the SMS - Approve instantly!
-                await pool.query('BEGIN');
-                await pool.query(
+                await db.query('BEGIN');
+                await db.query(
                     'UPDATE wallets SET balance = balance + $1 WHERE user_id = $2',
                     [amount, existing.user_id]
                 );
-                await pool.query(
+                await db.query(
                     'UPDATE deposits SET status = $1, confirmed_at = NOW() WHERE id = $2',
                     ['confirmed', existing.id]
                 );
-                await pool.query('COMMIT');
+                await db.query('COMMIT');
 
-                const userInfo = await pool.query('SELECT telegram_id FROM users WHERE id = $1', [existing.user_id]);
+                const userInfo = await db.query('SELECT telegram_id FROM users WHERE id = $1', [existing.user_id]);
                 if (userInfo.rows.length > 0) {
                     bot.sendMessage(userInfo.rows[0].telegram_id, `✅ ዲፖዚት ተረጋግጧል! ${amount} ብር ወደ ሒሳብዎ ተጨምሯል።`);
                 }
@@ -2458,14 +2440,14 @@ app.post('/telebirr-webhook', async (req, res) => {
 
         // Step 3: No matching record or not pending - save as unmatched
         console.log(`Transaction ${transactionId} not matched yet. Saving as unmatched.`);
-        await pool.query(
+        await db.query(
             'INSERT INTO deposits (user_id, amount, payment_method, confirmation_code, status, created_at) VALUES ($1, $2, $3, $4, $5, NOW())',
             [null, amount, 'telebirr', transactionId, 'unmatched']
         );
 
         res.status(200).json({ success: true });
     } catch (error) {
-        await pool.query('ROLLBACK').catch(() => {});
+        await db.query('ROLLBACK').catch(() => {});
         console.error('Telebirr webhook database error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
@@ -2479,7 +2461,7 @@ app.post('/api/admin/broadcast', upload.single('image'), async (req, res) => {
     if (!message && !imageFile) return res.status(400).json({ error: 'Message or Image is required' });
 
     try {
-        const users = await pool.query('SELECT telegram_id FROM users WHERE is_registered = true');
+        const users = await db.query('SELECT telegram_id FROM users WHERE is_registered = true');
         let successCount = 0;
         let failCount = 0;
 
@@ -2526,19 +2508,19 @@ app.get('/api/admin/advanced-stats', async (req, res) => {
             const key = interval === 'day' ? 'daily' : interval === 'week' ? 'weekly' : 'monthly';
             
             // Income (Confirmed Deposits)
-            const incomeRes = await pool.query(
+            const incomeRes = await db.query(
                 `SELECT COALESCE(SUM(amount), 0) as total FROM deposits WHERE status = 'confirmed' AND confirmed_at > NOW() - INTERVAL '1 ${interval}'`
             );
             stats[key].income = parseFloat(incomeRes.rows[0].total || 0);
 
             // Expense (Total payouts for won games)
-            const expenseRes = await pool.query(
+            const expenseRes = await db.query(
                 `SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE type = 'win' AND created_at > NOW() - INTERVAL '1 ${interval}'`
             );
             stats[key].expense = parseFloat(expenseRes.rows[0].total || 0);
 
             // Games with at least one participant
-            const gamesRes = await pool.query(
+            const gamesRes = await db.query(
                 `SELECT COUNT(DISTINCT g.id) as count 
                  FROM games g 
                  JOIN game_participants gp ON g.id = gp.game_id 
@@ -2556,10 +2538,10 @@ app.get('/api/admin/advanced-stats', async (req, res) => {
 
 app.get('/api/admin/stats', async (req, res) => {
     try {
-        const totalUsers = await pool.query('SELECT COUNT(*) as count FROM users');
-        const pendingDeposits = await pool.query('SELECT COUNT(*) as count FROM deposits WHERE status = $1', ['pending']);
-        const pendingWithdrawals = await pool.query('SELECT COUNT(*) as count FROM withdrawals WHERE status = $1', ['pending']);
-        const todayGames = await pool.query(
+        const totalUsers = await db.query('SELECT COUNT(*) as count FROM users');
+        const pendingDeposits = await db.query('SELECT COUNT(*) as count FROM deposits WHERE status = $1', ['pending']);
+        const pendingWithdrawals = await db.query('SELECT COUNT(*) as count FROM withdrawals WHERE status = $1', ['pending']);
+        const todayGames = await db.query(
             "SELECT COUNT(*) as count FROM games WHERE started_at >= CURRENT_DATE"
         );
         
@@ -2578,7 +2560,7 @@ app.get('/api/admin/stats', async (req, res) => {
 // Get all deposits
 app.get('/api/admin/deposits', async (req, res) => {
     try {
-        const result = await pool.query(`
+        const result = await db.query(`
             SELECT d.*, u.username 
             FROM deposits d 
             JOIN users u ON d.user_id = u.id 
@@ -2595,7 +2577,7 @@ app.get('/api/admin/deposits', async (req, res) => {
 // Get all withdrawals
 app.get('/api/admin/withdrawals', async (req, res) => {
     try {
-        const result = await pool.query(`
+        const result = await db.query(`
             SELECT w.*, u.username 
             FROM withdrawals w 
             JOIN users u ON w.user_id = u.id 
@@ -2612,7 +2594,7 @@ app.get('/api/admin/withdrawals', async (req, res) => {
 // Get all users
 app.get('/api/admin/users', async (req, res) => {
     try {
-        const result = await pool.query(`
+        const result = await db.query(`
             SELECT u.id, u.username, u.phone_number, u.created_at, w.balance 
             FROM users u 
             LEFT JOIN wallets w ON u.id = w.user_id 
@@ -2629,7 +2611,7 @@ app.get('/api/admin/users', async (req, res) => {
 // Get transactions
 app.get('/api/admin/transactions', async (req, res) => {
     try {
-        const result = await pool.query(`
+        const result = await db.query(`
             SELECT t.*, u.username 
             FROM transactions t 
             JOIN users u ON t.user_id = u.id 
@@ -2653,7 +2635,7 @@ app.post('/api/admin/deposits/:id/approve', async (req, res) => {
         }
         console.log(`Approving deposit ID: ${depositId}`);
         
-        const deposit = await pool.query(
+        const deposit = await db.query(
             'SELECT d.*, u.telegram_id as user_telegram_id FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = $1',
             [depositId]
         );
@@ -2671,7 +2653,7 @@ app.post('/api/admin/deposits/:id/approve', async (req, res) => {
         }
         
         // Start a transaction to ensure atomicity
-        const client = await pool.connect();
+        const client = await db.db.db.pool.connect();
         try {
             await client.query('BEGIN');
             
@@ -2715,7 +2697,7 @@ app.post('/api/admin/deposits/:id/reject', async (req, res) => {
         const depositId = parseInt(req.params.id);
         console.log(`Rejecting deposit ID: ${depositId}`);
         
-        const deposit = await pool.query(
+        const deposit = await db.query(
             'SELECT d.*, u.telegram_id as user_telegram_id FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.id = $1',
             [depositId]
         );
@@ -2732,7 +2714,7 @@ app.post('/api/admin/deposits/:id/reject', async (req, res) => {
             return res.status(400).json({ error: 'Deposit already processed' });
         }
         
-        await pool.query('UPDATE deposits SET status = $1 WHERE id = $2', ['rejected', depositId]);
+        await db.query('UPDATE deposits SET status = $1 WHERE id = $2', ['rejected', depositId]);
         console.log(`Successfully rejected deposit ${depositId}`);
         
         if (d.user_telegram_id && bot) {
@@ -2754,7 +2736,7 @@ app.post('/api/admin/withdrawals/:id/approve', async (req, res) => {
         const withdrawalId = parseInt(req.params.id);
         console.log(`Approving withdrawal ID: ${withdrawalId}`);
         
-        const withdrawal = await pool.query(
+        const withdrawal = await db.query(
             'SELECT w.*, u.telegram_id as user_telegram_id FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.id = $1',
             [withdrawalId]
         );
@@ -2771,7 +2753,7 @@ app.post('/api/admin/withdrawals/:id/approve', async (req, res) => {
             return res.status(400).json({ error: 'Withdrawal already processed' });
         }
         
-        const balanceCheck = await pool.query(
+        const balanceCheck = await db.query(
             'SELECT balance FROM wallets WHERE user_id = $1',
             [w.user_id]
         );
@@ -2781,7 +2763,7 @@ app.post('/api/admin/withdrawals/:id/approve', async (req, res) => {
             return res.status(400).json({ error: 'Insufficient balance' });
         }
         
-        const client = await pool.connect();
+        const client = await db.db.db.pool.connect();
         try {
             await client.query('BEGIN');
             
@@ -2861,7 +2843,7 @@ app.post('/telebirr-webhook', async (req, res) => {
 
             // Database Update
             // Find a 'pending' deposit with the extracted Transaction ID
-            const depositCheck = await pool.query(
+            const depositCheck = await db.query(
                 'SELECT d.*, u.telegram_id as user_telegram_id, u.username FROM deposits d JOIN users u ON d.user_id = u.id WHERE d.transaction_id = $1 AND d.status = $2',
                 [transactionId, 'pending']
             );
@@ -2869,7 +2851,7 @@ app.post('/telebirr-webhook', async (req, res) => {
             if (depositCheck.rows.length > 0) {
                 const d = depositCheck.rows[0];
                 
-                const client = await pool.connect();
+                const client = await db.db.db.pool.connect();
                 try {
                     await client.query('BEGIN');
                     
@@ -2931,7 +2913,7 @@ app.post('/api/admin/withdrawals/:id/reject', async (req, res) => {
         const withdrawalId = parseInt(req.params.id);
         console.log(`Rejecting withdrawal ID: ${withdrawalId}`);
         
-        const withdrawal = await pool.query(
+        const withdrawal = await db.query(
             'SELECT w.*, u.telegram_id as user_telegram_id FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.id = $1',
             [withdrawalId]
         );
@@ -2948,7 +2930,7 @@ app.post('/api/admin/withdrawals/:id/reject', async (req, res) => {
             return res.status(400).json({ error: 'Withdrawal already processed' });
         }
         
-        await pool.query('UPDATE withdrawals SET status = $1, processed_at = NOW() WHERE id = $2', ['rejected', withdrawalId]);
+        await db.query('UPDATE withdrawals SET status = $1, processed_at = NOW() WHERE id = $2', ['rejected', withdrawalId]);
         console.log(`Successfully rejected withdrawal ${withdrawalId}`);
         
         if (w.user_telegram_id && bot) {

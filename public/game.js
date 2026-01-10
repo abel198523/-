@@ -757,6 +757,9 @@ function handleWebSocketMessage(data) {
             updateTimerDisplay(data.timeLeft);
             updatePhaseDisplay(data.phase);
             
+            // Log to console for debugging
+            console.log('Timer update received:', data.timeLeft, 'Phase:', data.phase);
+            
             // Show selection countdown if in selection phase
             if (data.phase === 'selection') {
                 const timerContainer = document.getElementById('selection-timer-container');
@@ -767,6 +770,12 @@ function handleWebSocketMessage(data) {
             } else {
                 const timerContainer = document.getElementById('selection-timer-container');
                 if (timerContainer) timerContainer.style.display = 'none';
+            }
+
+            // Sync main game timer display if exists
+            const timeLeftEl = document.getElementById('time-left');
+            if (timeLeftEl) {
+                timeLeftEl.textContent = `${data.timeLeft}s`;
             }
             
             if (data.participantsCount !== undefined) {
