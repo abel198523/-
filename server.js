@@ -25,12 +25,14 @@ const Game = require('./models/Game');
 const { validateBingo } = require('./data/cards');
 
 const pool = new Pool({
-    connectionString: process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL,
+    connectionString: process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL, ssl: { rejectUnauthorized: false, checkServerIdentity: () => undefined } || process.env.DATABASE_URL,
     ssl: { 
-        rejectUnauthorized: false
+        rejectUnauthorized: false, checkServerIdentity: () => undefined
     },
     keepalive: true,
-    connectionTimeoutMillis: 5000
+    connectionTimeoutMillis: 10000,
+    idleTimeoutMillis: 30000,
+    max: 20
 });
 
 const app = express();

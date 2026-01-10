@@ -14,7 +14,8 @@ PORT = "5000"
 RENDER_SERVER_URL = "https://0db162a9-d352-40c0-8d36-3fc6c8186da5-00-3jemj5f77vtps.janeway.replit.dev"
 ADMIN_CHAT_ID = "8228419622"
 REDIS_URL = "rediss://default:AWYDAAIncDJiOTlmNmM1ZDY3ZWI0YThmYWY2OTllNzNhNDIyMGNiYnAyMjYxMTU@noted-pipefish-26115.upstash.io:6379"
-EXTERNAL_DATABASE_URL = "postgresql://neondb_owner:npg_Ls9iQldgt4SM@ep-solitary-brook-ah0il9oj-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'"
+EXTERNAL_DATABASE_URL = "postgresql://postgres:4qdXF1g7UT9IXVmr@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require&supavisor_session_id=royal_bingo"
+NODE_TLS_REJECT_UNAUTHORIZED = "0"
 
 [workflows]
 runButton = "Project"
