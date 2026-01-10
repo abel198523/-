@@ -705,14 +705,30 @@ function updateGameStats(data) {
     if (data.participantsCount !== undefined) {
         const playerCount = document.getElementById('player-count');
         if (playerCount) playerCount.textContent = data.participantsCount;
+        
+        const activePlayersCount = document.getElementById('active-players-count');
+        if (activePlayersCount) activePlayersCount.textContent = data.participantsCount;
     }
     if (data.totalJackpot !== undefined) {
         const prizePool = document.getElementById('prize-pool');
         if (prizePool) prizePool.textContent = `${parseFloat(data.totalJackpot).toFixed(2)}Br`;
+        
+        const activeJackpot = document.getElementById('active-jackpot-amount');
+        if (activeJackpot) activeJackpot.textContent = `${parseFloat(data.totalJackpot).toFixed(2)}Br`;
     }
     if (data.stake !== undefined) {
         const gameStake = document.getElementById('game-stake');
         if (gameStake) gameStake.textContent = `${parseFloat(data.stake).toFixed(2)}Br`;
+    }
+    
+    // Update banner visibility based on phase and player count
+    const banner = document.getElementById('active-game-banner');
+    if (banner) {
+        if (data.phase === 'game' || (data.participantsCount > 0)) {
+            banner.style.display = 'block';
+        } else {
+            banner.style.display = 'none';
+        }
     }
 }
 

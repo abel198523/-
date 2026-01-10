@@ -203,6 +203,78 @@ html, body {
     margin-top: 10px;
 }
 
+.active-game-banner {
+    background: linear-gradient(90deg, rgba(26, 34, 56, 0.9), rgba(45, 55, 90, 0.9));
+    border: 1px solid rgba(0, 200, 255, 0.3);
+    border-radius: 12px;
+    margin: 10px 15px;
+    padding: 10px 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.banner-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.banner-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background-color: #00d984;
+    border-radius: 50%;
+}
+
+.pulse {
+    animation: pulse-animation 2s infinite;
+}
+
+@keyframes pulse-animation {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 217, 132, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 217, 132, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 217, 132, 0); }
+}
+
+.status-text {
+    font-size: 0.85em;
+    color: #fff;
+    font-weight: 600;
+}
+
+.banner-stats {
+    display: flex;
+    gap: 15px;
+}
+
+.banner-stat {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.9em;
+}
+
+.running-tag {
+    background: #ffcc00;
+    color: #000;
+    font-size: 0.65em;
+    padding: 2px 5px;
+    border-radius: 4px;
+    margin-left: 5px;
+    font-weight: 900;
+}
+
+.stat-icon {
+    font-size: 1.1em;
+}
+
 /* ================================================== */
 /* ===== Profile Screen Redesign ===== */
 /* ================================================== */
