@@ -5,7 +5,7 @@ const { Redis: UpstashRedis } = require('@upstash/redis');
 // PostgreSQL Connection Pool
 // prioritized for external databases (Supabase, etc.)
 const pool = new Pool({
-    connectionString: (process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL).replace('db.sgcoecupsaljigypcoer.supabase.co', 'aws-0-us-east-1.pooler.supabase.com').replace(':5432/', ':6543/'),
+    connectionString: process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL,
     ssl: { 
         rejectUnauthorized: false
     }, 
