@@ -42,11 +42,25 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // --- Telegram Bot Logic Added ---
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const RENDER_SERVER_URL = process.env.RENDER_SERVER_URL;
-const MINI_APP_URL = process.env.MINI_APP_URL || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : null);
+
+// Dynamically determine the app URL
+let MINI_APP_URL = process.env.MINI_APP_URL;
+
+if (!MINI_APP_URL) {
+    if (process.env.REPLIT_DOMAINS) {
+        MINI_APP_URL = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+    } else if (process.env.RENDER_EXTERNAL_URL) {
+        MINI_APP_URL = process.env.RENDER_EXTERNAL_URL;
+    } else if (RENDER_SERVER_URL) {
+        MINI_APP_URL = RENDER_SERVER_URL;
+    }
+}
 
 console.log('MINI_APP_URL configuration:', {
     MINI_APP_URL: MINI_APP_URL,
-    REPLIT_DOMAINS: process.env.REPLIT_DOMAINS
+    REPLIT_DOMAINS: process.env.REPLIT_DOMAINS,
+    RENDER_EXTERNAL_URL: process.env.RENDER_EXTERNAL_URL,
+    RENDER_SERVER_URL: RENDER_SERVER_URL
 });
 
 // Use polling but handle conflicts gracefully
@@ -276,8 +290,7 @@ const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 
 // Helper function to get main keyboard
 function getMainKeyboard(telegramId) {
-    const finalUrl = "https://royal-bingo.onrender.com";
-    const miniAppUrlWithId = `${finalUrl}${finalUrl.includes('?') ? '&' : '?'}tg_id=${telegramId}`;
+    const miniAppUrlWithId = `${MINI_APP_URL}${MINI_APP_URL.includes('?') ? '&' : '?'}tg_id=${telegramId}`;
     
     return {
         keyboard: [
