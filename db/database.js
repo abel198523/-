@@ -5,13 +5,13 @@ const { Redis: UpstashRedis } = require('@upstash/redis');
 // PostgreSQL Connection Pool
 // prioritized for external databases (Supabase, etc.)
 const pool = new Pool({
-    connectionString: process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL, ssl: { rejectUnauthorized: false, checkServerIdentity: () => undefined } || process.env.DATABASE_URL,
+    connectionString: process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL,
     ssl: { 
-        rejectUnauthorized: false, checkServerIdentity: () => undefined
+        rejectUnauthorized: false
     }, 
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 15000,
+    connectionTimeoutMillis: 30000,
     keepalive: true,
     keepaliveInitialDelayMillis: 10000
 });
