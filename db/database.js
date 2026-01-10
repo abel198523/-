@@ -20,6 +20,20 @@ const pool = new Pool({
 // Force verbatim result order for Replit internal DB
 dns.setDefaultResultOrder('verbatim');
 
+// Mask sensitive parts of the URL for logging
+const getMaskedUrl = (url) => {
+    if (!url) return 'NONE';
+    try {
+        const parsed = new URL(url);
+        parsed.password = '****';
+        return parsed.toString();
+    } catch (e) {
+        return url.replace(/:[^:@]+@/, ':****@');
+    }
+};
+
+console.log('Using connection string:', getMaskedUrl(process.env.DATABASE_URL));
+
 // Redis Client logic with Upstash fallback support
 let redis = null;
 
