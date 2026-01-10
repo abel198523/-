@@ -1679,16 +1679,12 @@ async function gameLoop() {
     
     // Selection phase logic
     if (gameState.phase === 'selection') {
-        // No decrement here, the interval is managed by the gameLoop which runs every 1000ms
-    if (global.gameLoopStarted) return; global.gameLoopStarted = true;
-        // If we have multiple setInterval(gameLoop, 1000) calls, it will speed up.
-        // Let's ensure only one gameLoop is actually doing work.
         gameState.timeLeft--;
         if (gameState.timeLeft % 5 === 0) syncGameStateToRedis();
         
         broadcast({
             type: 'timer_update',
-            phase: gameState.phase,
+            phase: 'selection',
             timeLeft: gameState.timeLeft
         });
         

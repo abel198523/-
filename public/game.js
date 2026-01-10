@@ -726,6 +726,41 @@ function handleWebSocketMessage(data) {
     }
 
     switch (data.type) {
+        case 'timer_update':
+            updateTimerDisplay(data.timeLeft);
+            updatePhaseDisplay(data.phase);
+            
+            // Show selection countdown if in selection phase
+            if (data.phase === 'selection') {
+                const timerContainer = document.getElementById('selection-timer-container');
+                if (timerContainer) {
+                    timerContainer.textContent = `ጨዋታው ለመጀመር ${data.timeLeft} ሰከንድ ቀርቷል...`;
+                    timerContainer.style.display = 'block';
+                }
+            } else {
+                const timerContainer = document.getElementById('selection-timer-container');
+                if (timerContainer) timerContainer.style.display = 'none';
+            }
+            
+            if (data.participantsCount !== undefined) {
+                const playerCount = document.getElementById('player-count');
+                if (playerCount) playerCount.textContent = data.participantsCount;
+            }
+            if (data.totalJackpot !== undefined) {
+                const prizePool = document.getElementById('prize-pool');
+                if (prizePool) prizePool.textContent = `${parseFloat(data.totalJackpot).toFixed(2)}Br`;
+            }
+
+            // Force transition if time is up and we receive game phase
+            if (data.timeLeft <= 0 && data.phase === 'game') {
+                handlePhaseChange({ phase: 'game' });
+            } else if (data.timeLeft <= 0 && data.phase === 'selection') {
+                // Proactively show the game screen if a card is already selected
+                if (selectedCardId && cardConfirmed) {
+                    handlePhaseChange({ phase: 'game' });
+                }
+            }
+            break;
         case 'init':
             console.log('Game initialized:', data);
             updateTimerDisplay(data.timeLeft);
@@ -793,41 +828,6 @@ function handleWebSocketMessage(data) {
             break;
         case 'card_confirmed':
             updateWalletDisplay(data.balance);
-            break;
-        case 'timer_update':
-            updateTimerDisplay(data.timeLeft);
-            updatePhaseDisplay(data.phase);
-            
-            // Show selection countdown if in selection phase
-            if (data.phase === 'selection') {
-                const timerContainer = document.getElementById('selection-timer-container');
-                if (timerContainer) {
-                    timerContainer.textContent = `ጨዋታው ለመጀመር ${data.timeLeft} ሰከንድ ቀርቷል...`;
-                    timerContainer.style.display = 'block';
-                }
-            } else {
-                const timerContainer = document.getElementById('selection-timer-container');
-                if (timerContainer) timerContainer.style.display = 'none';
-            }
-            
-            if (data.participantsCount !== undefined) {
-                const playerCount = document.getElementById('player-count');
-                if (playerCount) playerCount.textContent = data.participantsCount;
-            }
-            if (data.totalJackpot !== undefined) {
-                const prizePool = document.getElementById('prize-pool');
-                if (prizePool) prizePool.textContent = `${parseFloat(data.totalJackpot).toFixed(2)}Br`;
-            }
-
-            // Force transition if time is up and we receive game phase
-            if (data.timeLeft <= 0 && data.phase === 'game') {
-                handlePhaseChange({ phase: 'game' });
-            } else if (data.timeLeft <= 0 && data.phase === 'selection') {
-                // Proactively show the game screen if a card is already selected
-                if (selectedCardId && cardConfirmed) {
-                    handlePhaseChange({ phase: 'game' });
-                }
-            }
             break;
         case 'phase_change':
             console.log('Phase changed:', data.phase);
