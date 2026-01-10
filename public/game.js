@@ -710,6 +710,12 @@ function updateTimerDisplay(seconds) {
     if (timerElement) {
         timerElement.textContent = `${seconds}s`;
     }
+    
+    // Also update selection timer if visible
+    const selectionTimer = document.getElementById('selection-timer-container');
+    if (selectionTimer) {
+        selectionTimer.textContent = `ጨዋታው ለመጀመር ${seconds} ሰከንድ ቀርቷል...`;
+    }
 }
 
 function updateGameStats(data) {

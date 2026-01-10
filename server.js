@@ -1620,7 +1620,37 @@ function startNumberCalling() {
 }
 
 // Global game loop for selection phase
+setInterval(() => {
+    if (gameState.phase === 'selection') {
+        gameState.timeLeft--;
+        
+        broadcast({
+            type: 'timer_update',
+            phase: 'selection',
+            timeLeft: gameState.timeLeft,
+            participantsCount: getConfirmedPlayersCount()
+        });
 
+        if (gameState.timeLeft <= 0) {
+            const confirmedPlayers = getConfirmedPlayersCount();
+            if (confirmedPlayers >= 2) {
+                console.log('Selection phase ended. Starting game with ' + confirmedPlayers + ' players.');
+                startGamePhase();
+                startNumberCalling();
+            } else {
+                console.log('Not enough players (needs 2). Resetting selection timer.');
+                gameState.timeLeft = SELECTION_TIME;
+                broadcast({
+                    type: 'timer_update',
+                    phase: 'selection',
+                    timeLeft: gameState.timeLeft,
+                    participantsCount: confirmedPlayers,
+                    message: 'ተጨማሪ ተጫዋቾች በመጠባበቅ ላይ...'
+                });
+            }
+        }
+    }
+}, 1000);
 
 function stopNumberCalling() {
     if (numberCallInterval) {
