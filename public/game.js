@@ -290,6 +290,17 @@ function initializeLandingScreen() {
     const startBtn = document.getElementById('start-selection-btn');
     const stakeButtons = document.querySelectorAll('.stake-btn');
     
+    // Automatically select Stake 10 and move to selection
+    if (landingScreen && selectionScreen) {
+        currentStake = 10;
+        window.currentStake = 10;
+        landingScreen.style.display = 'none';
+        selectionScreen.style.display = 'flex';
+        generateCardSelection();
+        updateBackButtonVisibility();
+        return; // Exit initialization as we already moved forward
+    }
+
     stakeButtons.forEach(btn => {
         btn.addEventListener('click', function() {
             const stake = parseInt(this.dataset.stake);
