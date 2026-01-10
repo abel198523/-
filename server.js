@@ -2535,7 +2535,7 @@ app.get('/api/admin/advanced-stats', async (req, res) => {
                 `SELECT COUNT(DISTINCT g.id) as count 
                  FROM games g 
                  JOIN game_participants gp ON g.id = gp.game_id 
-                 WHERE g.created_at > NOW() - INTERVAL '1 ${interval}'`
+                 WHERE g.started_at > NOW() - INTERVAL '1 ${interval}'`
             );
             stats[key].games = parseInt(gamesRes.rows[0].count || 0);
         }
@@ -2664,7 +2664,7 @@ app.post('/api/admin/deposits/:id/approve', async (req, res) => {
         }
         
         // Start a transaction to ensure atomicity
-        const client = await db.db.db.pool.connect();
+        const client = await db.pool.connect();
         try {
             await client.query('BEGIN');
             
@@ -2774,7 +2774,7 @@ app.post('/api/admin/withdrawals/:id/approve', async (req, res) => {
             return res.status(400).json({ error: 'Insufficient balance' });
         }
         
-        const client = await db.db.db.pool.connect();
+        const client = await db.pool.connect();
         try {
             await client.query('BEGIN');
             
