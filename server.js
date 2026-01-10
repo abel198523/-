@@ -25,7 +25,7 @@ const Game = require('./models/Game');
 const { validateBingo } = require('./data/cards');
 
 const pool = new Pool({
-    connectionString: process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL,
+    connectionString: (process.env.EXTERNAL_DATABASE_URL || process.env.DATABASE_URL).replace('db.sgcoecupsaljigypcoer.supabase.co', 'aws-0-us-east-1.pooler.supabase.com').replace(':5432/', ':6543/'),
     ssl: { 
         rejectUnauthorized: false
     },
