@@ -16,6 +16,12 @@ const pool = new Pool({
     keepaliveInitialDelayMillis: 10000
 });
 
+// Force IPv4 for external connections
+if (process.env.EXTERNAL_DATABASE_URL) {
+    const dns = require('dns');
+    dns.setDefaultResultOrder('ipv4first');
+}
+
 // Redis Client logic with Upstash fallback support
 let redis = null;
 

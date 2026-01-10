@@ -35,6 +35,12 @@ const pool = new Pool({
     max: 20
 });
 
+// Force IPv4 for external connections if URL contains hostname
+if (process.env.EXTERNAL_DATABASE_URL && !process.env.EXTERNAL_DATABASE_URL.includes(':::')) {
+    const dns = require('dns');
+    dns.setDefaultResultOrder('ipv4first');
+}
+
 const app = express();
 
 // ✅ Body parser MUST come first before any routes
