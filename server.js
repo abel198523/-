@@ -110,7 +110,6 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
     console.log('--- Received /start command ---');
     console.log('From User ID:', msg.from.id);
     console.log('Chat ID:', msg.chat.id);
-    console.log('Username:', msg.from.username);
     
     const chatId = msg.chat.id;
     const telegramId = msg.from.id;
@@ -118,26 +117,12 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
 
     try {
         // Simple immediate response to verify receipt
-        try {
-            await bot.sendMessage(chatId, "እንኳን ደህና መጡ! ጥያቄዎን እያስተናገድኩ ነው...");
-        } catch (botErr) {
-            console.error('Initial sendMessage failed:', botErr.message);
-        }
+        await bot.sendMessage(chatId, "እንኳን ደህና መጡ! ጥያቄዎን እያስተናገድኩ ነው...");
         
         // Check if user is already registered
-        let isRegistered = false;
-        let userId = null;
-        try {
-            const result = await db.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId.toString()]);
-            isRegistered = result.rows.length > 0;
-            if (isRegistered) userId = result.rows[0].id;
-        } catch (dbErr) {
-            console.error('Database query failed in /start:', dbErr.message);
-            throw dbErr; // Re-throw to be caught by main catch block
-        }
+        const result = await db.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId.toString()]);
+        const isRegistered = result.rows.length > 0;
         
-        console.log('User registration status:', isRegistered);
-
         if (isRegistered) {
             await bot.sendMessage(chatId, "እንኳን ደህና መጡ! ጨዋታውን ለመጀመር 'Play' የሚለውን ቁልፍ ይጫኑ።", {
                 reply_markup: getMainKeyboard(telegramId)
@@ -160,11 +145,7 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
         }
     } catch (err) {
         console.error('CRITICAL: Error in /start command handler:', err);
-        try {
-            await bot.sendMessage(chatId, "ይቅርታ፣ ችግር ተፈጥሯል። እባክዎ ጥቂት ቆይተው ይሞክሩ።");
-        } catch (sendErr) {
-            console.error('Failed to send error message to user:', sendErr.message);
-        }
+        await bot.sendMessage(chatId, "ይቅርታ፣ ችግር ተፈጥሯል። እባክዎ ጥቂት ቆይተው ይሞክሩ።");
     }
 });
 
