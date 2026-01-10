@@ -29,7 +29,8 @@ const pool = new Pool({
     ssl: { 
         rejectUnauthorized: false
     },
-    keepalive: true
+    keepalive: true,
+    connectionTimeoutMillis: 5000
 });
 
 const app = express();
