@@ -646,6 +646,15 @@ bot.on('message', async (msg) => {
             state.accountName = text;
             
             try {
+                // Security Fix: Deduct balance immediately upon request to prevent double-spending
+                const deductionSuccess = await Wallet.deductBalance(state.userId, state.amount, `Withdrawal request: ${state.amount} ETB to ${state.phone}`);
+                
+                if (!deductionSuccess) {
+                    await bot.sendMessage(chatId, '❌ በቂ ሒሳብ የለም ወይም ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።');
+                    userStates.delete(telegramId);
+                    return;
+                }
+
                 await db.query(
                     'INSERT INTO withdrawals (user_id, amount, phone_number, account_name, status) VALUES ($1, $2, $3, $4, $5)',
                     [state.userId, state.amount, state.phone, state.accountName, 'pending']
@@ -682,7 +691,7 @@ bot.on('message', async (msg) => {
                     `💵 መጠን: ${state.amount} ብር\n` +
                     `📞 ስልክ: ${state.phone}\n` +
                     `🏷 ስም: ${state.accountName}\n\n` +
-                    `⏳ በቅርቡ ይፈጸማል።`,
+                    `⏳ አድሚኑ ሲያጸድቀው ገንዘቡ ይላክላችኋል። ሒሳብዎ ላይ ተቀንሷል።`,
                     { reply_markup: getMainKeyboard(telegramId) }
                 );
             } catch (error) {
