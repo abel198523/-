@@ -2858,32 +2858,41 @@ app.get('/api/admin/users', async (req, res) => {
     app.post('/api/admin/users/bulk-adjust-balance', async (req, res) => {
         const { amount, action, reason } = req.body;
 
-        if (!amount || isNaN(amount) || amount <= 0) {
+        if (!amount || isNaN(amount) || amount < 0) {
             return res.status(400).json({ error: 'Invalid amount' });
         }
 
-        const adjustAmount = action === 'subtract' ? -Math.abs(amount) : Math.abs(amount);
         const description = reason || `Bulk admin balance adjustment (${action})`;
 
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
             
-            // Update all wallets
-            await client.query(`
-                UPDATE wallets 
-                SET balance = CASE 
-                    WHEN balance + $1 < 0 THEN 0 
-                    ELSE balance + $1 
-                END,
-                updated_at = NOW()
-            `, [adjustAmount]);
+            if (action === 'set') {
+                // Set all wallets to specific amount
+                await client.query(`
+                    UPDATE wallets 
+                    SET balance = $1,
+                    updated_at = NOW()
+                `, [amount]);
+            } else {
+                const adjustAmount = action === 'subtract' ? -Math.abs(amount) : Math.abs(amount);
+                // Update all wallets
+                await client.query(`
+                    UPDATE wallets 
+                    SET balance = CASE 
+                        WHEN balance + $1 < 0 THEN 0 
+                        ELSE balance + $1 
+                    END,
+                    updated_at = NOW()
+                `, [adjustAmount]);
+            }
 
             // Record transaction for all users
             await client.query(`
                 INSERT INTO transactions (user_id, type, amount, description)
                 SELECT user_id, $1, $2, $3 FROM wallets
-            `, [action === 'add' ? 'admin_add' : 'admin_subtract', Math.abs(amount), description]);
+            `, [action === 'set' ? 'admin_set' : (action === 'add' ? 'admin_add' : 'admin_subtract'), Math.abs(amount), description]);
             
             await client.query('COMMIT');
 

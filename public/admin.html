@@ -489,12 +489,13 @@
             </div>
 
             <div class="section" style="margin-bottom: 20px;">
-                <h3>ለሁሉም ተጠቃሚዎች ባላንስ ጨምር/ቀንስ (Bulk Adjust)</h3>
+                <h3>ለሁሉም ተጠቃሚዎች ባላንስ ማስተካከያ (Bulk Adjust)</h3>
                 <div style="display: flex; gap: 10px; margin-top: 15px;">
                     <input type="number" id="bulkAdjustAmount" placeholder="መጠን (Amount)" style="flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #444; background: #222; color: #fff;">
-                    <div style="display: flex; gap: 5px;">
-                        <button class="btn btn-approve" onclick="bulkAdjustBalance('add')" style="flex: 1;">➕ ለሁሉም ጨምር</button>
-                        <button class="btn btn-reject" onclick="bulkAdjustBalance('subtract')" style="flex: 1;">➖ ከሁሉም ቀንስ</button>
+                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">
+                        <button class="btn btn-approve" onclick="bulkAdjustBalance('add')" style="flex: 1; min-width: 100px;">➕ ጨምር</button>
+                        <button class="btn btn-reject" onclick="bulkAdjustBalance('subtract')" style="flex: 1; min-width: 100px;">➖ ቀንስ</button>
+                        <button class="btn" onclick="bulkAdjustBalance('set')" style="flex: 1; min-width: 100px; background: #3498db; color: white;">🎯 አድርግ (Set)</button>
                     </div>
                 </div>
             </div>
@@ -527,7 +528,7 @@
                 return;
             }
 
-            if (!confirm(`እርግጠኛ ነዎት? ${amount} ብር ለሁሉም ተጠቃሚዎች ${action === 'add' ? 'ሊጨምሩ' : 'ሊቀንሱ'} ነው?`)) return;
+            if (!confirm(`እርግጠኛ ነዎት? ${amount} ብር ለሁሉም ተጠቃሚዎች ${action === 'add' ? 'ሊጨምሩ' : action === 'subtract' ? 'ሊቀንሱ' : 'ሊያደርጉ'} ነው?`)) return;
 
             try {
                 const res = await fetch('/api/admin/users/bulk-adjust-balance', {
