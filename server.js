@@ -1444,10 +1444,10 @@ bot.on('error', (error) => {
 // --- End of Telegram Bot Logic ---
 
 const server = http.createServer(app);
-// Start selection phase loop if not running
-// if (!global.gameLoopInterval) {
-//    global.gameLoopInterval = setInterval(gameLoop, 1000);
-// }
+// Start selection phase loop
+if (!global.gameLoopInterval) {
+    global.gameLoopInterval = setInterval(gameLoop, 1000);
+}
 
 const wss = new WebSocket.Server({ server });
 
