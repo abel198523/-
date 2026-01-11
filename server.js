@@ -319,11 +319,15 @@ const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 
 // Helper function to get main keyboard
 function getMainKeyboard(telegramId) {
-    const miniAppUrlWithId = `${MINI_APP_URL}${MINI_APP_URL.includes('?') ? '&' : '?'}tg_id=${telegramId}`;
+    // Force use the current server's URL for testing in Replit
+    const currentUrl = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+    const miniAppUrlWithId = `${currentUrl}${currentUrl.includes('?') ? '&' : '?'}tg_id=${telegramId}`;
+    
+    console.log(`[DEBUG] Generating keyboard with URL: ${miniAppUrlWithId}`);
     
     return {
         keyboard: [
-            [{ text: "▶️ Play", web_app: { url: String(miniAppUrlWithId) } }],
+            [{ text: "▶️ Play (Replit)", web_app: { url: String(miniAppUrlWithId) } }],
             [{ text: "💰 Check Balance" }, { text: "🔗 Referral Link" }],
             [{ text: "💳 Deposit" }, { text: "💸 Withdraw" }]
         ],
