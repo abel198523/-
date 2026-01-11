@@ -41,7 +41,7 @@ dns.setDefaultResultOrder('verbatim');
 const app = express();
 
 // Maintenance Mode Flag
-const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true';
+const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true' || true; // Set to true for Render deployment fallback
 
 app.use((req, res, next) => {
     if (MAINTENANCE_MODE && !req.path.startsWith('/api/check-admin')) {
