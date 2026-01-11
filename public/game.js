@@ -320,6 +320,17 @@ function initializeLandingScreen() {
             }
         });
     });
+
+    const refreshWalletBtn = document.getElementById('refresh-wallet-btn');
+    if (refreshWalletBtn) {
+        refreshWalletBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            refreshWalletBtn.classList.add('rotating');
+            loadWallet().finally(() => {
+                setTimeout(() => refreshWalletBtn.classList.remove('rotating'), 500);
+            });
+        });
+    }
     
     if (startBtn) {
         startBtn.addEventListener('click', function() {
