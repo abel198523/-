@@ -699,6 +699,11 @@
                 document.getElementById('pendingDepositsCount').textContent = (data.pendingDeposits || 0) + ' በመጠባበቅ ላይ';
                 document.getElementById('pendingWithdrawalsCount').textContent = (data.pendingWithdrawals || 0) + ' በመጠባበቅ ላይ';
 
+                // Set interval to refresh stats every 30 seconds if not already set
+                if (!window.statsRefreshInterval) {
+                    window.statsRefreshInterval = setInterval(loadData, 30000);
+                }
+
                 // Load advanced stats
                 const advResponse = await fetch('/api/admin/advanced-stats');
                 const advData = await advResponse.json();
