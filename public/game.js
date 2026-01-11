@@ -369,16 +369,21 @@ function generateCardSelection() {
         cardElement.id = `card-btn-${cardId}`;
         cardElement.textContent = cardId;
         
-        cardElement.onclick = function(e) {
+        cardElement.addEventListener('click', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            if (this.classList.contains('taken')) return false;
-            console.log('Card tapped:', cardId);
+            if (this.classList.contains('taken')) return;
+            console.log('Card clicked/tapped:', cardId);
             if (!cardConfirmed) {
                 showCardPreview(cardId);
             }
-            return false;
-        };
+        });
+        
+        cardElement.addEventListener('touchstart', function(e) {
+            // Let the click event handle it to avoid double firing
+            // but ensure we're capturing touches for mobile
+            console.log('Card touchstart:', cardId);
+        }, {passive: true});
         
         if (cardConfirmed && cardId === selectedCardId) {
             cardElement.classList.add('selected');
@@ -455,14 +460,16 @@ function showCardPreview(cardId) {
     });
     
     modal.style.display = 'flex';
-    modal.style.zIndex = '10000';
-    console.log('Modal display set to flex');
+    modal.style.zIndex = '10001';
+    modal.classList.add('active'); // Use class if CSS transition is used
+    console.log('Modal display set to flex, zIndex 10001');
 }
 
 function hideCardPreview() {
     const modal = document.getElementById('card-preview-modal');
     if (modal) {
         modal.style.display = 'none';
+        modal.classList.remove('active');
     }
     previewCardId = null;
 }
