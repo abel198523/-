@@ -74,10 +74,10 @@ class Game {
             `UPDATE games 
              SET winner_id = $1, winning_card = $2, called_numbers = $3, 
                  status = 'completed', ended_at = CURRENT_TIMESTAMP,
-                 prize_amount = $4, platform_fee = $5
-             WHERE id = $6
+                 total_pot = $4
+             WHERE id = $5
              RETURNING *`,
-            [userId, cardId, calledNumbers, winnerPrize, platformFee, gameId]
+            [userId, cardId, calledNumbers, totalPot, gameId]
         );
         
         await db.query(

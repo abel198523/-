@@ -1801,7 +1801,7 @@ if (!global.selectionInterval) {
                         if (player.isCardConfirmed && player.selectedCardId) {
                             try {
                                 const stakeAmount = gameState.stakeAmount || 10;
-                                await Wallet.adjustBalance(player.userId, stakeAmount, 'add', 'Game cancelled: Not enough players');
+                                await Wallet.deductBalance(player.userId, -stakeAmount, `Refund: Game #${currentGameId} cancelled`);
                                 player.balance += stakeAmount;
                                 player.isCardConfirmed = false;
                                 player.selectedCardId = null;
@@ -1876,7 +1876,7 @@ async function gameLoop() {
                     if (player.isCardConfirmed && player.selectedCardId) {
                         try {
                             const stakeAmount = gameState.stakeAmount || 10;
-                            await Wallet.adjustBalance(player.userId, stakeAmount, 'add', 'Game cancelled: Not enough players');
+                            await Wallet.deductBalance(player.userId, -stakeAmount, `Refund: Game #${currentGameId} cancelled`);
                             player.balance += stakeAmount;
                             player.isCardConfirmed = false;
                             player.selectedCardId = null;

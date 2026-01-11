@@ -1316,7 +1316,7 @@ function showWinnerDisplay(winner) {
             <h2 style="color: #fff; margin-bottom: 5px; font-size: 1.4em;">${title}</h2>
             <div style="color: #8890a6; line-height: 1.4; margin-bottom: 20px;">
                 <p style="font-size: 1.1em; color: #fff; font-weight: 800; margin-bottom: 5px;">${winner.username}</p>
-                <p style="font-size: 0.9em; color: #00f2ff; margin-bottom: 5px;">Phone: ${winner.phoneNumber || '---'}</p>
+                ${winner.phoneNumber && winner.phoneNumber !== '---' ? `<p style="font-size: 0.9em; color: #00f2ff; margin-bottom: 5px;">Phone: ${winner.phoneNumber}</p>` : ''}
                 <p>ካርድ: #${winner.cardId}</p>
                 <p style="color: #ffd700; font-size: 1.2em; font-weight: 800; margin-top: 10px;">ሽልማት: ${winner.prize || 0} ብር</p>
                 <p style="color: #ffd700; font-size: 0.9em; margin-top: 5px;">የማሸነፊያ መስመር: ${getPatternName(winner.pattern.type)}</p>
