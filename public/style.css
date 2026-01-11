@@ -677,6 +677,91 @@ html, body {
 /* ===== Custom Toast ===== */
 /* ================================================== */
 
+/* No Balance Modal */
+.no-balance-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 5, 16, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(10px);
+}
+
+.no-balance-content {
+    background: var(--color-block-dark);
+    padding: 40px 30px;
+    border-radius: 30px;
+    border: 2px solid var(--color-red);
+    box-shadow: 0 0 50px rgba(255, 51, 102, 0.2);
+    text-align: center;
+    width: 85%;
+    max-width: 350px;
+    animation: modalSlideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes modalSlideUp {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.no-balance-icon {
+    font-size: 4em;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 0 10px rgba(255, 51, 102, 0.5));
+}
+
+.no-balance-content h2 {
+    color: #fff;
+    font-size: 1.8em;
+    font-weight: 800;
+    margin-bottom: 15px;
+}
+
+.no-balance-content p {
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 10px;
+    font-size: 1em;
+    line-height: 1.5;
+}
+
+.no-balance-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 30px;
+}
+
+.no-balance-btn {
+    padding: 15px;
+    border-radius: 15px;
+    border: none;
+    font-weight: 800;
+    font-size: 1em;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.no-balance-btn.main {
+    background: linear-gradient(135deg, var(--color-purple), var(--color-accent));
+    color: #fff;
+    box-shadow: 0 10px 20px rgba(0, 242, 255, 0.3);
+}
+
+.no-balance-btn.deposit {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.no-balance-btn:active {
+    transform: scale(0.96);
+}
+
 .custom-toast {
     position: fixed;
     bottom: -100px;

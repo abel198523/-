@@ -334,13 +334,64 @@ function initializeLandingScreen() {
     
     if (startBtn) {
         startBtn.addEventListener('click', function() {
-            if (landingScreen) landingScreen.style.display = 'none';
-            if (selectionScreen) selectionScreen.style.display = 'flex';
-            
-            generateCardSelection();
-            updateBackButtonVisibility();
+            // Check balance before allowing to proceed to selection screen
+            fetch(`/api/wallet-info/${currentUserId}`)
+                .then(res => res.json())
+                .then(data => {
+                    const totalBalance = data.total_balance !== undefined ? data.total_balance : (parseFloat(data.balance) || 0);
+                    const stake = data.stake || 10;
+                    
+                    if (totalBalance < stake) {
+                        showNoBalanceModal(totalBalance, stake);
+                        return;
+                    }
+                    
+                    if (landingScreen) landingScreen.style.display = 'none';
+                    if (selectionScreen) selectionScreen.style.display = 'flex';
+                    
+                    generateCardSelection();
+                    updateBackButtonVisibility();
+                })
+                .catch(err => {
+                    console.error('Error checking balance:', err);
+                    // Fallback to local profile check if API fails
+                    if (window.userProfile && parseFloat(window.userProfile.totalBalance) < 10) {
+                        showNoBalanceModal(window.userProfile.totalBalance, 10);
+                        return;
+                    }
+                    
+                    if (landingScreen) landingScreen.style.display = 'none';
+                    if (selectionScreen) selectionScreen.style.display = 'flex';
+                    generateCardSelection();
+                });
         });
     }
+}
+
+function showNoBalanceModal(balance, stake) {
+    const modal = document.createElement('div');
+    modal.className = 'no-balance-modal';
+    modal.innerHTML = `
+        <div class="no-balance-content">
+            <div class="no-balance-icon">⚠️</div>
+            <h2>በቂ ገንዘብ የልዎትም</h2>
+            <p>ለመሳተፍ ቢያንስ <b>${stake} ETB</b> ያስፈልጋል።</p>
+            <p>ያለዎት ባላንስ: <b>${balance.toFixed(2)} ETB</b></p>
+            <div class="no-balance-actions">
+                <button class="no-balance-btn deposit" onclick="window.location.reload()">ተመለስ</button>
+                <button class="no-balance-btn main" id="go-to-bot-btn">ገንዘብ አስገባ (Deposit)</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    document.getElementById('go-to-bot-btn').addEventListener('click', () => {
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.close();
+        } else {
+            modal.remove();
+        }
+    });
 }
 
 let selectedCardId = null;

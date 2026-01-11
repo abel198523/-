@@ -2387,7 +2387,8 @@ app.get('/api/profile/:telegramId', async (req, res) => {
         const tgId = parseInt(telegramId) || 0;
         
         const userResult = await db.query(
-            `SELECT u.id, u.username, u.telegram_id, u.phone_number, u.is_registered, u.created_at, w.balance 
+            `SELECT u.id, u.username, u.telegram_id, u.phone_number, u.is_registered, u.created_at, 
+                    w.balance, w.winning_balance 
              FROM users u 
              LEFT JOIN wallets w ON u.id = w.user_id 
              WHERE u.telegram_id = $1`,
@@ -2399,6 +2400,9 @@ app.get('/api/profile/:telegramId', async (req, res) => {
         }
 
         const user = userResult.rows[0];
+        const mainBalance = parseFloat(user.balance) || 0;
+        const winningBalance = parseFloat(user.winning_balance) || 0;
+        const totalBalance = mainBalance + winningBalance;
         
         const gamesResult = await db.query(
             `SELECT COUNT(*) as total_games FROM game_participants WHERE user_id = $1`,
@@ -2416,7 +2420,9 @@ app.get('/api/profile/:telegramId', async (req, res) => {
                 username: user.username || 'Player',
                 telegramId: user.telegram_id,
                 phoneNumber: user.phone_number || '---',
-                balance: parseFloat(user.balance) || 0,
+                balance: mainBalance,
+                winningBalance: winningBalance,
+                totalBalance: totalBalance,
                 totalGames: parseInt(gamesResult.rows[0].total_games) || 0,
                 wins: parseInt(winsResult.rows[0].wins) || 0,
                 memberSince: user.created_at
@@ -2504,7 +2510,7 @@ app.get('/api/wallet-info/:userId', async (req, res) => {
         const telegramId = parseInt(userId) || 0;
         
         const result = await db.query(
-            `SELECT u.id, u.is_registered, w.balance 
+            `SELECT u.id, u.is_registered, w.balance, w.winning_balance 
              FROM users u 
              LEFT JOIN wallets w ON u.id = w.user_id 
              WHERE u.telegram_id = $1`,
@@ -2514,20 +2520,27 @@ app.get('/api/wallet-info/:userId', async (req, res) => {
         if (result.rows.length === 0) {
             return res.json({ 
                 balance: 0, 
+                winning_balance: 0,
+                total_balance: 0,
                 is_registered: false,
                 stake: 10
             });
         }
 
         const user = result.rows[0];
+        const mainBalance = parseFloat(user.balance) || 0;
+        const winningBalance = parseFloat(user.winning_balance) || 0;
+        
         res.json({ 
-            balance: parseFloat(user.balance) || 0, 
+            balance: mainBalance, 
+            winning_balance: winningBalance,
+            total_balance: mainBalance + winningBalance,
             is_registered: user.is_registered || false,
             stake: 10
         });
     } catch (err) {
         console.error('Wallet info error:', err);
-        res.status(500).json({ balance: 0, is_registered: false, stake: 10 });
+        res.status(500).json({ balance: 0, winning_balance: 0, total_balance: 0, is_registered: false, stake: 10 });
     }
 });
 
