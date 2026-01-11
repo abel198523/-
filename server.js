@@ -248,10 +248,10 @@ bot.on('contact', async (msg) => {
         }
         const userId = userResult.rows[0].id;
 
-        // Create wallet with 20 ETB bonus
+        // Create wallet with 10 ETB bonus
         await db.query(
             'INSERT INTO wallets (user_id, balance) VALUES ($1, $2)',
-            [userId, 20.00]
+            [userId, 10.00]
         );
 
         // If referred, handle referral bonus
@@ -278,7 +278,7 @@ bot.on('contact', async (msg) => {
         userStates.delete(senderId);
         console.log(`New user registered successfully: ${senderId} - ${phoneNumber}`);
         
-        bot.sendMessage(chatId, "✅ በተሳካ ሁኔታ ተመዝግበዋል!\n\n🎁 20 ብር የእንኳን ደህና መጡ ቦነስ አግኝተዋል!\n\nአሁን 'Play' ን ይጫኑ!", {
+        bot.sendMessage(chatId, "✅ በተሳካ ሁኔታ ተመዝግበዋል!\n\n🎁 10 ብር የእንኳን ደህና መጡ ቦነስ አግኝተዋል!\n\nአሁን 'Play' ን ይጫኑ!", {
             reply_markup: getMainKeyboard(senderId)
         });
         
