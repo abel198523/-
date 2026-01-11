@@ -477,6 +477,15 @@
         </div>
         <div class="sub-content">
             <div class="section" style="margin-bottom: 20px;">
+                <h3>ተጠቃሚን ፈልግ (Search User)</h3>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <input type="text" id="searchPhone" placeholder="የስልክ ቁጥር ያስገቡ (ለምሳሌ 09...)" style="flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #444; background: #222; color: #fff;">
+                    <button class="btn btn-approve" onclick="searchUserByPhone()">🔍 ፈልግ</button>
+                </div>
+                <div id="searchResults" style="margin-top: 10px;"></div>
+            </div>
+
+            <div class="section" style="margin-bottom: 20px;">
                 <h3>ባላንስ አስተካክል (Adjust Balance)</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px;">
                     <input type="number" id="targetUserId" placeholder="User ID" style="padding: 10px; border-radius: 5px; border: 1px solid #444; background: #222; color: #fff;">
@@ -523,6 +532,36 @@
                 }
             } catch (err) {
                 alert('Error: ' + err.message);
+            }
+        }
+
+        async function searchUserByPhone() {
+            const phone = document.getElementById('searchPhone').value;
+            if (!phone) return alert('እባክዎ የስልክ ቁጥር ያስገቡ');
+
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '<div class="loading">በመፈለግ ላይ...</div>';
+
+            try {
+                const res = await fetch(`/api/admin/users/search?phone=${phone}`);
+                const users = await res.json();
+                
+                if (users.length === 0) {
+                    resultsDiv.innerHTML = '<div style="color: #e74c3c;">ምንም ተጠቃሚ አልተገኘም</div>';
+                    return;
+                }
+
+                let html = '<div style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-top: 10px;">';
+                users.forEach(u => {
+                    html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; padding: 5px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <span>${u.username} (${u.phone_number}) - ${parseFloat(u.balance).toFixed(2)} ብር</span>
+                        <button class="btn" style="background: #f39c12" onclick="setTargetUser(${u.id})">ይምረጡ</button>
+                    </div>`;
+                });
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+            } catch (err) {
+                resultsDiv.innerHTML = '<div style="color: #e74c3c;">ስህተት ተፈጥሯል</div>';
             }
         }
 
