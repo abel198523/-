@@ -124,12 +124,14 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
 
     try {
         // Simple immediate response to verify receipt
-        await bot.sendMessage(chatId, "እንኳን ደህና መጡ! ጥያቄዎን እያስተናገድኩ ነው...");
+        // await bot.sendMessage(chatId, "እንኳን ደህና መጡ! ጥያቄዎን እያስተናገድኩ ነው...");
         
         // Check if user is already registered
         const result = await db.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId.toString()]);
         const isRegistered = result.rows.length > 0;
         
+        console.log('User registration status:', isRegistered);
+
         if (isRegistered) {
             await bot.sendMessage(chatId, "እንኳን ደህና መጡ! ጨዋታውን ለመጀመር 'Play' የሚለውን ቁልፍ ይጫኑ።", {
                 reply_markup: getMainKeyboard(telegramId)
@@ -152,7 +154,11 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
         }
     } catch (err) {
         console.error('CRITICAL: Error in /start command handler:', err);
-        await bot.sendMessage(chatId, "ይቅርታ፣ ችግር ተፈጥሯል። እባክዎ ጥቂት ቆይተው ይሞክሩ።");
+        // Provide more descriptive error for debugging if not in production
+        const errorMsg = process.env.NODE_ENV === 'production' 
+            ? "ይቅርታ፣ ችግር ተፈጥሯል። እባክዎ ጥቂት ቆይተው ይሞክሩ።"
+            : `ይቅርታ፣ ችግር ተፈጥሯል: ${err.message}`;
+        await bot.sendMessage(chatId, errorMsg);
     }
 });
 

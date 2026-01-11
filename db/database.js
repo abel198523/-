@@ -10,9 +10,9 @@ const pool = new Pool({
     ssl: process.env.DATABASE_URL && (process.env.DATABASE_URL.includes('localhost') || process.env.DATABASE_URL.includes('127.0.0.1')) ? false : { 
         rejectUnauthorized: false
     }, 
-    max: 10,
+    max: 20, // Increased for stability
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000, // Reduced timeout
     keepalive: true,
     keepaliveInitialDelayMillis: 10000
 });
