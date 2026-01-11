@@ -264,8 +264,8 @@ async function loadProfile() {
             const usernameEl = document.getElementById('profile-username-header');
             if (usernameEl) usernameEl.textContent = profile.username || '---';
             
-            const idSubEl = document.getElementById('profile-id-sub');
-            if (idSubEl) idSubEl.textContent = `ID: ${profile.telegramId || '---'}`;
+            const miniappIdEl = document.getElementById('profile-miniapp-id');
+            if (miniappIdEl) miniappIdEl.textContent = profile.id || '---';
             
             const telegramIdEl = document.getElementById('profile-telegram-id');
             if (telegramIdEl) telegramIdEl.textContent = profile.telegramId || '---';
@@ -589,6 +589,34 @@ function initializeUser() {
     } catch (error) {
         console.error('Error initializing user:', error);
         currentUserId = null;
+    }
+}
+
+function copyToClipboard(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    const text = el.textContent;
+    if (!text || text === '---') return;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('ተገልብጧል (Copied!)');
+        }).catch(err => {
+            console.error('Copy failed:', err);
+        });
+    } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showToast('ተገልብጧል (Copied!)');
+        } catch (err) {
+            console.error('Fallback copy failed:', err);
+        }
+        document.body.removeChild(textArea);
     }
 }
 
