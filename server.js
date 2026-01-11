@@ -2442,11 +2442,21 @@ app.post('/telebirr-webhook', async (req, res) => {
             }
 
             if (existing.status === 'pending') {
-                // User already sent the code, now we have the SMS - Approve instantly!
+        // User already sent the code, now we have the SMS - Approve instantly!
                 await db.query('BEGIN');
+                
+                // Calculate bonus based on deposit amount
+                let bonus = 0;
+                if (amount >= 500) bonus = 50;
+                else if (amount >= 200) bonus = 20;
+                else if (amount >= 100) bonus = 10;
+                else if (amount >= 50) bonus = 5;
+                
+                const totalCredit = amount + bonus;
+                
                 await db.query(
                     'UPDATE wallets SET balance = balance + $1 WHERE user_id = $2',
-                    [amount, existing.user_id]
+                    [totalCredit, existing.user_id]
                 );
                 await db.query(
                     'UPDATE deposits SET status = $1, confirmed_at = NOW() WHERE id = $2',
@@ -2454,16 +2464,21 @@ app.post('/telebirr-webhook', async (req, res) => {
                 );
                 await db.query('COMMIT');
 
-        const userInfo = await db.query('SELECT telegram_id FROM users WHERE id = $1', [existing.user_id]);
-        if (userInfo.rows.length > 0) {
-            const userLang = 'am'; // Defaulting to Amharic for now, but could be dynamic
-            const successMsg = userLang === 'am' 
-                ? `✅ ዲፖዚት ተረጋግጧል! ${amount} ብር ወደ ሒሳብዎ ተጨምሯል (Transaction: ${transactionId})`
-                : `✅ Deposit Confirmed! ${amount} ETB added to your wallet (Transaction: ${transactionId})`;
-            bot.sendMessage(userInfo.rows[0].telegram_id, successMsg);
-        }
+                const userInfo = await db.query('SELECT telegram_id FROM users WHERE id = $1', [existing.user_id]);
+                if (userInfo.rows.length > 0) {
+                    const userLang = 'am'; // Defaulting to Amharic for now, but could be dynamic
+                    let successMsg = '';
+                    if (userLang === 'am') {
+                        successMsg = `✅ ዲፖዚት ተረጋግጧል! ${amount} ብር ወደ ሒሳብዎ ተጨምሯል (Transaction: ${transactionId})`;
+                        if (bonus > 0) successMsg += `\n🎁 የ ${bonus} ብር ተጨማሪ ቦነስ አግኝተዋል!`;
+                    } else {
+                        successMsg = `✅ Deposit Confirmed! ${amount} ETB added to your wallet (Transaction: ${transactionId})`;
+                        if (bonus > 0) successMsg += `\n🎁 You received an additional ${bonus} ETB bonus!`;
+                    }
+                    bot.sendMessage(userInfo.rows[0].telegram_id, successMsg);
+                }
                 
-                console.log(`Deposit ${existing.id} auto-confirmed via late SMS arrival`);
+                console.log(`Deposit ${existing.id} auto-confirmed via late SMS arrival with bonus: ${bonus}`);
                 return res.status(200).json({ success: true });
             }
         }
@@ -2687,31 +2702,40 @@ app.post('/api/admin/deposits/:id/approve', async (req, res) => {
         try {
             await client.query('BEGIN');
             
+            // Calculate bonus based on deposit amount
+            let bonus = 0;
+            if (d.amount >= 500) bonus = 50;
+            else if (d.amount >= 200) bonus = 20;
+            else if (d.amount >= 100) bonus = 10;
+            else if (d.amount >= 50) bonus = 5;
+            
+            const totalCredit = parseFloat(d.amount) + bonus;
+            
             await client.query('UPDATE deposits SET status = $1, confirmed_at = NOW() WHERE id = $2', ['confirmed', depositId]);
             
             await client.query(
                 'UPDATE wallets SET balance = balance + $1, updated_at = NOW() WHERE user_id = $2',
-                [d.amount, d.user_id]
+                [totalCredit, d.user_id]
             );
             
             await client.query(
                 'INSERT INTO transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)',
-                [d.user_id, 'deposit', d.amount, `Deposit via ${d.payment_method}`]
+                [d.user_id, 'deposit', totalCredit, `Deposit via ${d.payment_method}${bonus > 0 ? ' + Bonus' : ''}`]
             );
             
             await client.query('COMMIT');
-            console.log(`Successfully approved deposit ${depositId}`);
+            console.log(`Successfully approved deposit ${depositId} with bonus: ${bonus}`);
+            
+            if (d.user_telegram_id && bot) {
+                let successMsg = `✅ ዲፖዚትዎ ተረጋግጧል!\n\n💵 ${d.amount} ብር ወደ ሒሳብዎ ተጨምሯል።`;
+                if (bonus > 0) successMsg += `\n🎁 የ ${bonus} ብር ተጨማሪ ቦነስ አግኝተዋል!`;
+                bot.sendMessage(d.user_telegram_id, successMsg).catch(err => console.error('Telegram notify error:', err));
+            }
         } catch (e) {
             await client.query('ROLLBACK');
             throw e;
         } finally {
             client.release();
-        }
-        
-        if (d.user_telegram_id && bot) {
-            bot.sendMessage(d.user_telegram_id, 
-                `✅ ዲፖዚትዎ ተረጋግጧል!\n\n💵 ${d.amount} ብር ወደ ሒሳብዎ ተጨምሯል።`
-            ).catch(err => console.error('Telegram notify error:', err));
         }
         
         res.json({ success: true });
