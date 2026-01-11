@@ -373,6 +373,20 @@ function generateCardSelection() {
             e.preventDefault();
             e.stopPropagation();
             if (this.classList.contains('taken')) return;
+            
+            // Show alert and stop timer
+            if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.showAlert('ቆየት ብለው ይሞክሩ በማስተካከል ላይ ነን');
+            } else {
+                alert('ቆየት ብለው ይሞክሩ በማስተካከል ላይ ነን');
+            }
+            
+            // Stop the selection timer
+            if (window.selectionTimer) {
+                clearInterval(window.selectionTimer);
+            }
+            return;
+
             console.log('Card clicked:', cardId);
             
             // Check balance before showing preview
