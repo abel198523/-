@@ -373,10 +373,29 @@ function generateCardSelection() {
             e.preventDefault();
             e.stopPropagation();
             if (this.classList.contains('taken')) return;
-            console.log('Card clicked/tapped:', cardId);
-            if (!cardConfirmed) {
-                showCardPreview(cardId);
-            }
+            console.log('Card clicked:', cardId);
+            
+            // Check balance before showing preview
+            fetch(`/api/profile/${currentUserId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && parseFloat(data.profile.balance) < currentStake) {
+                        showToast(`ያለዎት ባላንስ ከ ${currentStake} ብር ያነሰ ነው። እባክዎ ዲፖዚት ያድርጉ።`);
+                        return;
+                    }
+                    if (!cardConfirmed) {
+                        showCardPreview(cardId);
+                    }
+                })
+                .catch(err => {
+                    console.error('Balance check error:', err);
+                    // Fallback to local profile check if API fails
+                    if (window.userProfile && parseFloat(window.userProfile.balance) < currentStake) {
+                        showToast(`ያለዎት ባላንስ ከ ${currentStake} ብር ያነሰ ነው።`);
+                        return;
+                    }
+                    if (!cardConfirmed) showCardPreview(cardId);
+                });
         });
         
         cardElement.addEventListener('touchstart', function(e) {
@@ -419,10 +438,6 @@ function markCardAsTaken(cardId) {
 }
 
 function showCardPreview(cardId) {
-    if (userProfile && parseFloat(userProfile.balance) < 10) {
-        showStatus('ካርድ ለመምረጥ ቢያንስ 10 ብር ባላንስ ሊኖርዎት ይገባል።', 'error');
-        return;
-    }
     console.log('Showing preview for card:', cardId);
     previewCardId = cardId;
     const modal = document.getElementById('card-preview-modal');
@@ -459,10 +474,13 @@ function showCardPreview(cardId) {
         });
     });
     
-    modal.style.display = 'flex';
-    modal.style.zIndex = '10001';
-    modal.classList.add('active'); // Use class if CSS transition is used
-    console.log('Modal display set to flex, zIndex 10001');
+    // Force visibility and high z-index
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.setProperty('z-index', '99999', 'important');
+    modal.style.setProperty('visibility', 'visible', 'important');
+    modal.style.setProperty('opacity', '1', 'important');
+    modal.classList.add('active');
+    console.log('Modal display set to flex, zIndex 99999');
 }
 
 function hideCardPreview() {
