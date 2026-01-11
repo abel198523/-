@@ -44,9 +44,13 @@ const app = express();
 const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true' || true; // Set to true for Render deployment fallback
 
 app.use((req, res, next) => {
-    if (MAINTENANCE_MODE && !req.path.startsWith('/api/check-admin')) {
-        // Allow static assets but block game logic if needed
-        if (req.path === '/' || req.path.endsWith('.html')) {
+    if (MAINTENANCE_MODE) {
+        // Skip maintenance for admin-related API paths or if a special admin header/param is present
+        const isAdminRequest = req.path.startsWith('/api/check-admin') || 
+                             req.path.startsWith('/api/admin') ||
+                             req.query.admin === 'true';
+
+        if (!isAdminRequest && (req.path === '/' || req.path.endsWith('.html'))) {
              return res.send(`
                 <!DOCTYPE html>
                 <html>
