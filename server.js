@@ -1452,8 +1452,8 @@ if (!global.gameLoopInterval) {
 const wss = new WebSocket.Server({ server });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'chewatabingo-secret-key-change-in-production';
-const SELECTION_TIME = 45;
-const WINNER_DISPLAY_TIME = 5;
+const SELECTION_TIME = 60; // Increased to 60 seconds for a better flow
+const WINNER_DISPLAY_TIME = 10; // Increased for better visibility
 
 let currentGameId = null;
 let gameState = {
@@ -1778,12 +1778,12 @@ if (!global.selectionInterval) {
 
             if (gameState.timeLeft <= 0) {
                 const confirmedPlayers = getConfirmedPlayersCount();
-                if (confirmedPlayers >= 1) {
+                if (confirmedPlayers >= 2) { 
                     console.log('Selection phase ended. Starting game with ' + confirmedPlayers + ' players.');
                     startGamePhase();
                     startNumberCalling();
                 } else {
-                    console.log('Not enough players (needs 1). Resetting selection timer.');
+                    console.log('Not enough players. Resetting selection timer.');
                     gameState.timeLeft = SELECTION_TIME;
                     broadcast({
                         type: 'timer_update',
@@ -1818,16 +1818,14 @@ async function gameLoop() {
     
     // Selection phase logic
     if (gameState.phase === 'selection') {
-        // No timer decrement here as it's handled in the global 1s interval
         if (gameState.timeLeft % 5 === 0) syncGameStateToRedis();
         
         if (gameState.timeLeft <= 0) {
             const confirmedPlayers = getConfirmedPlayersCount();
-            if (confirmedPlayers >= 2) {
+            if (confirmedPlayers >= 2) { 
                 console.log('--- Starting game phase with', confirmedPlayers, 'players ---');
                 startGamePhase();
                 
-                // Ensure number calling starts shortly after phase change
                 setTimeout(() => {
                     if (gameState.phase === 'game') {
                         startNumberCalling();
