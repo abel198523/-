@@ -2386,14 +2386,19 @@ app.post('/telebirr-webhook', async (req, res) => {
         return res.status(200).json({ status: 'ignored', reason: 'invalid_sender' });
     }
 
-    if (!message || !message.includes('ተቀብለዋል')) {
-        console.log('Message does not contain the required keyword "ተቀብለዋል"');
+    const amharicKeyword = 'ተቀብለዋል';
+    const englishKeyword = 'received';
+    
+    if (!message || (!message.includes(amharicKeyword) && !message.toLowerCase().includes(englishKeyword))) {
+        console.log('Message does not contain the required keywords "ተቀብለዋል" or "received"');
         return res.status(200).json({ status: 'ignored', reason: 'missing_keyword' });
     }
 
-    // Regex patterns for Transaction ID and Amount based on Amharic format
-    const txIdPattern = /(?:ቁጥርዎ|receipt\/|ቁጥርዎ\s*)\s*([A-Z0-9]{8,15})/i;
-    const amountPattern = /([\d,.]+)\s*ብር/;
+    // Regex patterns for Transaction ID and Amount based on Amharic and English formats
+    // Amharic: ቁጥርዎ ABC123XYZ ... 100.00 ብር
+    // English: ... transaction ABC123XYZ ... 100.00 ETB
+    const txIdPattern = /(?:ቁጥርዎ|receipt\/|ቁጥርዎ\s*|transaction\s*|id[:\s]*|ref[:\s]*)\s*([A-Z0-9]{8,15})/i;
+    const amountPattern = /([\d,.]+)\s*(?:ብር|ETB|birr)/i;
 
     const txIdMatch = message.match(txIdPattern);
     const amountMatch = message.match(amountPattern);
