@@ -210,6 +210,8 @@ html, body {
     margin: 10px 15px;
     padding: 10px 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    min-height: 50px;
+    flex-shrink: 0;
 }
 
 .banner-content {
@@ -931,6 +933,7 @@ html, body {
     overflow-y: auto;
     box-shadow: var(--shadow-main);
     border: 1px solid var(--color-glass-border);
+    min-height: 0;
 }
 
 .card-number-btn {
