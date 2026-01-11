@@ -1777,20 +1777,46 @@ if (!global.selectionInterval) {
             });
 
             if (gameState.timeLeft <= 0) {
-                const confirmedPlayers = getConfirmedPlayersCount();
-                if (confirmedPlayers >= 1) { 
-                    console.log('Selection phase ended. Starting game with ' + confirmedPlayers + ' players.');
+                const confirmedCount = getConfirmedPlayersCount();
+                if (confirmedCount >= 2) { 
+                    console.log('Selection phase ended. Starting game with ' + confirmedCount + ' players.');
                     startGamePhase();
                     startNumberCalling();
                 } else {
-                    console.log('Not enough players. Resetting selection timer.');
+                    console.log('Not enough players. Refunding and resetting selection timer.');
+                    
+                    // Refund stake to the single player if they exist
+                    gameState.players.forEach(async (player) => {
+                        if (player.isCardConfirmed && player.selectedCardId) {
+                            try {
+                                const stakeAmount = gameState.stakeAmount || 10;
+                                await Wallet.adjustBalance(player.userId, stakeAmount, 'add', 'Game cancelled: Not enough players');
+                                player.balance += stakeAmount;
+                                player.isCardConfirmed = false;
+                                player.selectedCardId = null;
+                                // Find player's websocket and notify
+                                wss.clients.forEach(client => {
+                                    if (client.playerId === player.id) {
+                                        client.send(JSON.stringify({
+                                            type: 'game_cancelled',
+                                            message: 'በቂ ተጫዋች የለም። ብርዎ ተመላሽ ተደርጓል።',
+                                            balance: player.balance
+                                        }));
+                                    }
+                                });
+                            } catch (err) {
+                                console.error('Refund error:', err);
+                            }
+                        }
+                    });
+
                     gameState.timeLeft = SELECTION_TIME;
                     broadcast({
                         type: 'timer_update',
                         phase: 'selection',
                         timeLeft: gameState.timeLeft,
-                        participantsCount: confirmedPlayers,
-                        message: 'ተጨማሪ ተጫዋቾች በመጠባበቅ ላይ...'
+                        participantsCount: 0,
+                        message: 'በቂ ተጫዋች የለም። ተጨማሪ ተጫዋቾች በመጠባበቅ ላይ...'
                     });
                 }
             }
@@ -1821,9 +1847,9 @@ async function gameLoop() {
         if (gameState.timeLeft % 5 === 0) syncGameStateToRedis();
         
         if (gameState.timeLeft <= 0) {
-            const confirmedPlayers = getConfirmedPlayersCount();
-            if (confirmedPlayers >= 1) { 
-                console.log('--- Starting game phase with', confirmedPlayers, 'players ---');
+            const confirmedCount = getConfirmedPlayersCount();
+            if (confirmedCount >= 2) { 
+                console.log('--- Starting game phase with', confirmedCount, 'players ---');
                 startGamePhase();
                 
                 setTimeout(() => {
@@ -1832,7 +1858,32 @@ async function gameLoop() {
                     }
                 }, 1000);
             } else {
-                console.log('--- Not enough players confirmed, restarting selection ---');
+                console.log('--- Not enough players confirmed, refunding and restarting selection ---');
+                
+                // Refund logic
+                gameState.players.forEach(async (player) => {
+                    if (player.isCardConfirmed && player.selectedCardId) {
+                        try {
+                            const stakeAmount = gameState.stakeAmount || 10;
+                            await Wallet.adjustBalance(player.userId, stakeAmount, 'add', 'Game cancelled: Not enough players');
+                            player.balance += stakeAmount;
+                            player.isCardConfirmed = false;
+                            player.selectedCardId = null;
+                            wss.clients.forEach(client => {
+                                if (client.playerId === player.id) {
+                                    client.send(JSON.stringify({
+                                        type: 'game_cancelled',
+                                        message: 'በቂ ተጫዋች የለም። ብርዎ ተመላሽ ተደርጓል።',
+                                        balance: player.balance
+                                    }));
+                                }
+                            });
+                        } catch (err) {
+                            console.error('Refund error:', err);
+                        }
+                    }
+                });
+
                 startSelectionPhase();
             }
         }

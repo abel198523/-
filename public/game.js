@@ -805,6 +805,11 @@ function handleWebSocketMessage(data) {
     }
 
     switch (data.type) {
+        case 'game_cancelled':
+            showToast(data.message);
+            updateWalletDisplay(data.balance);
+            resetGameUI();
+            break;
         case 'timer_update':
             updateTimerDisplay(data.timeLeft);
             updatePhaseDisplay(data.phase);
