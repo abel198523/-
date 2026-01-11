@@ -2454,10 +2454,14 @@ app.post('/telebirr-webhook', async (req, res) => {
                 );
                 await db.query('COMMIT');
 
-                const userInfo = await db.query('SELECT telegram_id FROM users WHERE id = $1', [existing.user_id]);
-                if (userInfo.rows.length > 0) {
-                    bot.sendMessage(userInfo.rows[0].telegram_id, `✅ ዲፖዚት ተረጋግጧል! ${amount} ብር ወደ ሒሳብዎ ተጨምሯል።`);
-                }
+        const userInfo = await db.query('SELECT telegram_id FROM users WHERE id = $1', [existing.user_id]);
+        if (userInfo.rows.length > 0) {
+            const userLang = 'am'; // Defaulting to Amharic for now, but could be dynamic
+            const successMsg = userLang === 'am' 
+                ? `✅ ዲፖዚት ተረጋግጧል! ${amount} ብር ወደ ሒሳብዎ ተጨምሯል (Transaction: ${transactionId})`
+                : `✅ Deposit Confirmed! ${amount} ETB added to your wallet (Transaction: ${transactionId})`;
+            bot.sendMessage(userInfo.rows[0].telegram_id, successMsg);
+        }
                 
                 console.log(`Deposit ${existing.id} auto-confirmed via late SMS arrival`);
                 return res.status(200).json({ success: true });
