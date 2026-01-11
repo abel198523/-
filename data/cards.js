@@ -108,67 +108,98 @@ function validateBingo(cardId, calledNumbers) {
     const calledSet = new Set(calledNumbers.map(n => Number(n)));
     calledSet.add(0); // FREE space is always considered called
     
+    console.log(`[DEBUG] Validating Bingo for card ${cardId}`);
+    console.log(`[DEBUG] Called numbers:`, Array.from(calledSet));
+
     // Check rows
     for (let row = 0; row < 5; row++) {
         let rowComplete = true;
         let indices = [];
+        let rowNumbers = [];
         for (let col = 0; col < 5; col++) {
             const num = Number(cardData[row][col]);
             indices.push(row * 5 + col);
+            rowNumbers.push(num);
             if (num !== 0 && !calledSet.has(num)) {
                 rowComplete = false;
                 break;
             }
         }
-        if (rowComplete) return { type: 'row', index: row, indices };
+        if (rowComplete) {
+            console.log(`[DEBUG] Bingo found! Row ${row}:`, rowNumbers);
+            return { type: 'row', index: row, indices };
+        }
     }
     
     // Check columns
     for (let col = 0; col < 5; col++) {
         let colComplete = true;
         let indices = [];
+        let colNumbers = [];
         for (let row = 0; row < 5; row++) {
             const num = Number(cardData[row][col]);
             indices.push(row * 5 + col);
+            colNumbers.push(num);
             if (num !== 0 && !calledSet.has(num)) {
                 colComplete = false;
                 break;
             }
         }
-        if (colComplete) return { type: 'column', index: col, indices };
+        if (colComplete) {
+            console.log(`[DEBUG] Bingo found! Column ${col}:`, colNumbers);
+            return { type: 'column', index: col, indices };
+        }
     }
     
     // Check diagonals
     let diag1Complete = true;
     let diag1Indices = [];
+    let diag1Numbers = [];
     let diag2Complete = true;
     let diag2Indices = [];
+    let diag2Numbers = [];
     for (let i = 0; i < 5; i++) {
         const num1 = Number(cardData[i][i]);
         diag1Indices.push(i * 5 + i);
+        diag1Numbers.push(num1);
         if (num1 !== 0 && !calledSet.has(num1)) diag1Complete = false;
         
         const num2 = Number(cardData[i][4 - i]);
         diag2Indices.push(i * 5 + (4 - i));
+        diag2Numbers.push(num2);
         if (num2 !== 0 && !calledSet.has(num2)) diag2Complete = false;
     }
     
-    if (diag1Complete) return { type: 'diagonal', index: 1, indices: diag1Indices };
-    if (diag2Complete) return { type: 'diagonal', index: 2, indices: diag2Indices };
+    if (diag1Complete) {
+        console.log(`[DEBUG] Bingo found! Diagonal 1:`, diag1Numbers);
+        return { type: 'diagonal', index: 1, indices: diag1Indices };
+    }
+    if (diag2Complete) {
+        console.log(`[DEBUG] Bingo found! Diagonal 2:`, diag2Numbers);
+        return { type: 'diagonal', index: 2, indices: diag2Indices };
+    }
     
     // Check corners
     const cornerIndices = [0, 4, 20, 24];
     let cornersComplete = true;
+    let cornerNumbers = [];
     for (const idx of cornerIndices) {
         const r = Math.floor(idx / 5);
         const c = idx % 5;
         const num = Number(cardData[r][c]);
+        cornerNumbers.push(num);
         if (num !== 0 && !calledSet.has(num)) {
             cornersComplete = false;
             break;
         }
     }
-    if (cornersComplete) return { type: 'corners', indices: cornerIndices };
+    if (cornersComplete) {
+        console.log(`[DEBUG] Bingo found! Corners:`, cornerNumbers);
+        return { type: 'corners', indices: cornerIndices };
+    }
+    
+    console.log(`[DEBUG] No Bingo found for card ${cardId}`);
+    return null;
     
     return null;
 }
