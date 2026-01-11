@@ -1,4 +1,10 @@
 require('dotenv').config();
+
+// Fix: Ensure DATABASE_URL is available by falling back to EXTERNAL_DATABASE_URL
+if (!process.env.DATABASE_URL && process.env.EXTERNAL_DATABASE_URL) {
+    process.env.DATABASE_URL = process.env.EXTERNAL_DATABASE_URL;
+}
+
 const express = require('express');
 const http = require('http'); // ✅ የተስተካከለ
 const WebSocket = require('ws'); 
