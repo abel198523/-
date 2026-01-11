@@ -446,7 +446,7 @@ bot.onText(/💸 Withdraw/, async (msg) => {
     
     try {
         const balanceResult = await db.query(
-            'SELECT w.balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
+            'SELECT w.balance, w.winning_balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
             [telegramId.toString()]
         );
         
@@ -455,10 +455,10 @@ bot.onText(/💸 Withdraw/, async (msg) => {
             return;
         }
 
-        const balance = parseFloat(balanceResult.rows[0].balance);
+        const balance = parseFloat(balanceResult.rows[0].winning_balance || 0);
 
         if (balance < 100) {
-            await bot.sendMessage(chatId, `❌ በቂ ሒሳብ የለም። ገንዘብ ለማውጣት ቢያንስ 100 ብር ሊኖርዎት ይገባል።\n\n💰 የእርስዎ ቀሪ ሒሳብ: ${balance.toFixed(2)} ብር`);
+            await bot.sendMessage(chatId, `❌ በቂ ሒሳብ የለም። ገንዘብ ለማውጣት ቢያንስ 100 ብር የሚወጣ ባላንስ (Winning Balance) ሊኖርዎት ይገባል።\n\n💰 የእርስዎ የሚወጣ (Winning) ባላንስ: ${balance.toFixed(2)} ብር`);
             return;
         }
 
