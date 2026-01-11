@@ -1427,18 +1427,18 @@ let playerIdCounter = 0;
 
 function initializeMasterNumbers() {
     gameState.masterNumbers = [];
-    for (let i = 1; i <= 99; i++) {
+    for (let i = 1; i <= 75; i++) {
         gameState.masterNumbers.push(i);
     }
     gameState.calledNumbers = [];
 }
 
 function getLetterForNumber(num) {
-    if (num >= 1 && num <= 20) return 'B';
-    if (num >= 21 && num <= 40) return 'I';
-    if (num >= 41 && num <= 60) return 'N';
-    if (num >= 61 && num <= 80) return 'G';
-    if (num >= 81 && num <= 99) return 'O';
+    if (num >= 1 && num <= 15) return 'B';
+    if (num >= 16 && num <= 30) return 'I';
+    if (num >= 31 && num <= 45) return 'N';
+    if (num >= 46 && num <= 60) return 'G';
+    if (num >= 61 && num <= 75) return 'O';
     return '';
 }
 
