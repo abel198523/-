@@ -2817,6 +2817,26 @@ app.get('/api/admin/transactions', async (req, res) => {
 });
 
 // Approve deposit via API
+// Admin: Search user by phone number
+app.get('/api/admin/users/search', async (req, res) => {
+    const { phone } = req.query;
+    if (!phone) return res.status(400).json({ error: 'Phone number is required' });
+
+    try {
+        const result = await pool.query(
+            `SELECT u.id, u.username, u.phone_number, w.balance 
+             FROM users u 
+             LEFT JOIN wallets w ON u.id = w.user_id 
+             WHERE u.phone_number LIKE $1`,
+            [`%${phone}%`]
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('Search error:', err);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 // Admin: Get all users
 app.get('/api/admin/users', async (req, res) => {
     try {
