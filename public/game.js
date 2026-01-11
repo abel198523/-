@@ -261,8 +261,11 @@ async function loadProfile() {
                 avatarLetter.textContent = (profile.username || 'P').charAt(0).toUpperCase();
             }
             
-            const usernameEl = document.getElementById('profile-username');
+            const usernameEl = document.getElementById('profile-username-header');
             if (usernameEl) usernameEl.textContent = profile.username || '---';
+            
+            const idSubEl = document.getElementById('profile-id-sub');
+            if (idSubEl) idSubEl.textContent = `ID: ${profile.telegramId || '---'}`;
             
             const telegramIdEl = document.getElementById('profile-telegram-id');
             if (telegramIdEl) telegramIdEl.textContent = profile.telegramId || '---';

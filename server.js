@@ -2203,7 +2203,7 @@ app.get('/api/profile/:telegramId', async (req, res) => {
         );
         
         const winsResult = await db.query(
-            `SELECT COUNT(*) as wins FROM games WHERE winner_id = $1`,
+            `SELECT COUNT(*) as wins FROM game_participants WHERE user_id = $1 AND is_winner = true`,
             [user.id]
         );
 
