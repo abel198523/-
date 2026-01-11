@@ -1723,7 +1723,10 @@ async function startWinnerDisplay(winnerInfo) {
         type: 'phase_change',
         phase: 'winner',
         timeLeft: gameState.timeLeft,
-        winner: winnerInfo
+        winner: {
+            ...winnerInfo,
+            phoneNumber: winnerInfo.phoneNumber || '---'
+        }
     });
 }
 
