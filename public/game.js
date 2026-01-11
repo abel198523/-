@@ -297,11 +297,8 @@ function initializeLandingScreen() {
     if (landingScreen && selectionScreen) {
         currentStake = 10;
         window.currentStake = 10;
-        landingScreen.style.display = 'none';
-        selectionScreen.style.display = 'flex';
-        generateCardSelection();
-        updateBackButtonVisibility();
-        return; // Exit initialization as we already moved forward
+        // Don't auto-transition here, let the user see the landing screen and click Start
+        // unless they are returning from a game.
     }
 
     stakeButtons.forEach(btn => {
@@ -373,6 +370,8 @@ function generateCardSelection() {
         cardElement.textContent = cardId;
         
         cardElement.onclick = function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             if (this.classList.contains('taken')) return false;
             console.log('Card tapped:', cardId);
             if (!cardConfirmed) {
