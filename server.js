@@ -225,9 +225,12 @@ bot.on('contact', async (msg) => {
                 await db.query('UPDATE wallets SET balance = balance + $1 WHERE user_id = $2', [bonusAmount, referrerId]);
                 
                 // Notify referrer
-                const referrerInfo = await db.query('SELECT telegram_id FROM users WHERE id = $1', [referrerId]);
-                if (referrerInfo.rows.length > 0) {
-                    bot.sendMessage(referrerInfo.rows[0].telegram_id.toString(), `🎁 አዲስ ሰው በሊንክዎ ስለተመዘገበ የ ${bonusAmount} ብር ቦነስ አግኝተዋል!`);
+                const referrerResult = await db.query('SELECT telegram_id FROM users WHERE id = $1', [referrerId]);
+                if (referrerResult.rows.length > 0) {
+                    const referrerTelegramId = referrerResult.rows[0].telegram_id;
+                    const bonusMsg = `🎁 አዲስ ሰው በግብዣ ሊንክዎ ስለተመዘገበ የ ${bonusAmount} ብር ቦነስ አግኝተዋል!\n\n` +
+                                   `👤 አዲስ ተመዝጋቢ: ${username}`;
+                    bot.sendMessage(referrerTelegramId.toString(), bonusMsg);
                 }
             } catch (refErr) {
                 console.error('Referral bonus error:', refErr);
