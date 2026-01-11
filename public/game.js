@@ -182,7 +182,7 @@ function showRegistrationRequired() {
         regScreen.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 9999;';
         regScreen.innerHTML = `
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; text-align: center; padding: 20px;">
-                <h1 style="font-size: 2em; margin-bottom: 20px;">🎰 ችዋታቢንጎ</h1>
+                <h1 style="font-size: 2em; margin-bottom: 20px;">🎰 ሮያል ቢንጎ</h1>
                 <div style="background: rgba(255,255,255,0.1); padding: 30px; border-radius: 15px; max-width: 300px;">
                     <p style="font-size: 1.2em; margin-bottom: 20px;">⚠️ አልተመዘገቡም</p>
                     <p style="margin-bottom: 20px;">ይህን ጨዋታ ለመጫወት መጀመሪያ መመዝገብ አለብዎት።</p>

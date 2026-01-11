@@ -51,7 +51,7 @@ app.use((req, res, next) => {
                 <!DOCTYPE html>
                 <html>
                 <head>
-                    <title>Maintenance - ችዋታቢንጎ</title>
+                    <title>Maintenance - ሮያል ቢንጎ</title>
                     <meta name="viewport" content="width=device-width, initial-scale=1">
                     <style>
                         body { background: #1a1a2e; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
@@ -62,7 +62,7 @@ app.use((req, res, next) => {
                 <body>
                     <div class="container">
                         <h1>🚧 በዝግጅት ላይ ነን</h1>
-                        <p>ችዋታቢንጎ ለጥቂት ጊዜ ለጥገና ተዘግቷል።</p>
+                        <p>ሮያል ቢንጎ ለጥቂት ጊዜ ለጥገና ተዘግቷል።</p>
                         <p>በቅርቡ እንመለሳለን፣ ስለ ትዕግስትዎ እናመሰግናለን! 🙏</p>
                     </div>
                 </body>
@@ -157,7 +157,7 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
     const telegramId = msg.from.id;
 
     if (MAINTENANCE_MODE) {
-        return bot.sendMessage(chatId, "🚧 <b>ችዋታቢንጎ ለጥቂት ጊዜ ለጥገና ተዘግቷል።</b>\n\nበቅርቡ እንመለሳለን፣ ስለ ትዕግስትዎ እናመሰግናለን! 🙏", { parse_mode: 'HTML' });
+        return bot.sendMessage(chatId, "🚧 <b>ሮያል ቢንጎ ለጥቂት ጊዜ ለጥገና ተዘግቷል።</b>\n\nበቅርቡ እንመለሳለን፣ ስለ ትዕግስትዎ እናመሰግናለን! 🙏", { parse_mode: 'HTML' });
     }
 
     const referralCode = match ? match[1] : null;
