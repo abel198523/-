@@ -743,6 +743,10 @@ bot.on('message', async (msg) => {
             } else if (/^[A-Z0-9]{8,15}$/i.test(rawText)) {
                 // If it's just a plain code
                 finalCode = rawText.toUpperCase();
+            } else if (rawText.length > 20) {
+                // If the text is long and doesn't match the specific patterns, 
+                // we treat the first 15 chars as a potential code or just use a snippet
+                finalCode = rawText.substring(0, 50); // Keep more for admin to see
             }
             
             if (amountMatch) {
