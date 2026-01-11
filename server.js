@@ -2062,9 +2062,10 @@ wss.on('connection', (ws) => {
                             break;
                         }
                         
-                        db.query('SELECT balance FROM wallets WHERE user_id = $1', [player.userId])
+                        db.query('SELECT balance, winning_balance FROM wallets WHERE user_id = $1', [player.userId])
                             .then(res => {
-                                const balance = res.rows.length > 0 ? parseFloat(res.rows[0].balance) : 0;
+                                const row = res.rows[0];
+                                const balance = row ? (parseFloat(row.balance || 0) + parseFloat(row.winning_balance || 0)) : 0;
                                 if (balance < 10) {
                                     ws.send(JSON.stringify({
                                         type: 'error',
