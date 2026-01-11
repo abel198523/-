@@ -114,30 +114,31 @@ bot.on('message', (msg) => {
 
 // Handle the /start command
 bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
-    console.log('--- Received /start command ---');
-    console.log('From User ID:', msg.from.id);
-    console.log('Chat ID:', msg.chat.id);
-    
     const chatId = msg.chat.id;
     const telegramId = msg.from.id;
     const referralCode = match ? match[1] : null;
 
+    console.log(`[DEBUG] /start from ${telegramId} in chat ${chatId}`);
+
     try {
-        // Simple immediate response to verify receipt
-        // await bot.sendMessage(chatId, "እንኳን ደህና መጡ! ጥያቄዎን እያስተናገድኩ ነው...");
-        
-        // Check if user is already registered
-        const result = await db.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId.toString()]);
+        // Step 1: Check database connection
+        let result;
+        try {
+            result = await db.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId.toString()]);
+        } catch (dbErr) {
+            console.error('[DEBUG] DB Query Error:', dbErr.message);
+            await bot.sendMessage(chatId, `❌ የዳታቤዝ ስህተት (DB Error): ${dbErr.message}\nDATABASE_URL ተዋቅሯል? ${!!process.env.DATABASE_URL}`);
+            return;
+        }
+
         const isRegistered = result.rows.length > 0;
-        
-        console.log('User registration status:', isRegistered);
+        console.log(`[DEBUG] User ${telegramId} registered: ${isRegistered}`);
 
         if (isRegistered) {
             await bot.sendMessage(chatId, "እንኳን ደህና መጡ! ጨዋታውን ለመጀመር 'Play' የሚለውን ቁልፍ ይጫኑ።", {
                 reply_markup: getMainKeyboard(telegramId)
             });
         } else {
-            // Save referral code in state if present
             if (referralCode) {
                 userStates.set(telegramId, { action: 'register', referredBy: referralCode });
             }
@@ -153,12 +154,8 @@ bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
             });
         }
     } catch (err) {
-        console.error('CRITICAL: Error in /start command handler:', err);
-        // Provide more descriptive error for debugging if not in production
-        const errorMsg = process.env.NODE_ENV === 'production' 
-            ? "ይቅርታ፣ ችግር ተፈጥሯል። እባክዎ ጥቂት ቆይተው ይሞክሩ።"
-            : `ይቅርታ፣ ችግር ተፈጥሯል: ${err.message}`;
-        await bot.sendMessage(chatId, errorMsg);
+        console.error('[DEBUG] Global /start Error:', err);
+        await bot.sendMessage(chatId, `❌ ያልታወቀ ስህተት (Bot Error): ${err.message}\nStack: ${err.stack.split('\n')[0]}`);
     }
 });
 
