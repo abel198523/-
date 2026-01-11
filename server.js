@@ -40,6 +40,39 @@ dns.setDefaultResultOrder('verbatim');
 
 const app = express();
 
+// Maintenance Mode Flag
+const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true';
+
+app.use((req, res, next) => {
+    if (MAINTENANCE_MODE && !req.path.startsWith('/api/check-admin')) {
+        // Allow static assets but block game logic if needed
+        if (req.path === '/' || req.path.endsWith('.html')) {
+             return res.send(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Maintenance - ችዋታቢንጎ</title>
+                    <meta name="viewport" content="width=device-width, initial-scale=1">
+                    <style>
+                        body { background: #1a1a2e; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+                        .container { padding: 20px; background: rgba(255,255,255,0.05); border-radius: 15px; border: 1px solid #ffcc00; }
+                        h1 { color: #ffcc00; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>🚧 በዝግጅት ላይ ነን</h1>
+                        <p>ችዋታቢንጎ ለጥቂት ጊዜ ለጥገና ተዘግቷል።</p>
+                        <p>በቅርቡ እንመለሳለን፣ ስለ ትዕግስትዎ እናመሰግናለን! 🙏</p>
+                    </div>
+                </body>
+                </html>
+            `);
+        }
+    }
+    next();
+});
+
 // ✅ Body parser MUST come first before any routes
 app.use(cors());
 app.use(bodyParser.json());
@@ -122,6 +155,11 @@ bot.on('message', (msg) => {
 bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
     const chatId = msg.chat.id;
     const telegramId = msg.from.id;
+
+    if (MAINTENANCE_MODE) {
+        return bot.sendMessage(chatId, "🚧 <b>ችዋታቢንጎ ለጥቂት ጊዜ ለጥገና ተዘግቷል።</b>\n\nበቅርቡ እንመለሳለን፣ ስለ ትዕግስትዎ እናመሰግናለን! 🙏", { parse_mode: 'HTML' });
+    }
+
     const referralCode = match ? match[1] : null;
 
     console.log(`[DEBUG] /start from ${telegramId} in chat ${chatId}`);
