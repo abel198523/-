@@ -185,7 +185,7 @@ function validateBingo(cardId, calledNumbers) {
         // Return all patterns found
         return {
             isWin: true,
-            patterns: winningPatterns,
+            // patterns: winningPatterns, // Removing extra info as requested
             // For backward compatibility, provide primary pattern info
             type: winningPatterns[0].type,
             indices: winningPatterns[0].indices

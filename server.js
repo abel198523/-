@@ -2166,7 +2166,6 @@ wss.on('connection', (ws) => {
                                         userId: player.userId,
                                         username: player.username,
                                         cardId: player.selectedCardId,
-                                        pattern: winPattern,
                                         prize: prizeAmount
                                     });
                                 }).catch(err => {
@@ -2175,7 +2174,6 @@ wss.on('connection', (ws) => {
                                         userId: player.userId,
                                         username: player.username,
                                         cardId: player.selectedCardId,
-                                        pattern: winPattern,
                                         prize: prizeAmount
                                     });
                                 });
