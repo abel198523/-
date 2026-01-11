@@ -967,6 +967,67 @@ bot.onText(/\/pending/, async (msg) => {
     }
 });
 
+// Admin command to adjust balance via Telegram
+bot.onText(/\/adjust (\d+) (add|subtract) (\d+)/, async (msg, match) => {
+    const chatId = msg.chat.id;
+    const adminId = msg.from.id.toString();
+    const userId = match[1];
+    const action = match[2];
+    const amount = parseFloat(match[3]);
+
+    try {
+        const adminCheck = await db.query(
+            'SELECT * FROM admin_users WHERE telegram_id = $1 AND is_active = true',
+            [adminId]
+        );
+        
+        if (adminCheck.rows.length === 0 && chatId.toString() !== ADMIN_CHAT_ID) {
+            await bot.sendMessage(chatId, '❌ የአድሚን መብት የለዎትም።');
+            return;
+        }
+
+        const adjustAmount = action === 'subtract' ? -Math.abs(amount) : Math.abs(amount);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            const walletRes = await client.query('SELECT balance FROM wallets WHERE user_id = $1 FOR UPDATE', [userId]);
+            if (walletRes.rows.length === 0) {
+                await client.query('ROLLBACK');
+                await bot.sendMessage(chatId, '❌ ተጠቃሚው አልተገኘም ወይም ዋሌት የለውም።');
+                return;
+            }
+
+            const newBalance = parseFloat(walletRes.rows[0].balance) + adjustAmount;
+            if (newBalance < 0) {
+                await client.query('ROLLBACK');
+                await bot.sendMessage(chatId, '❌ ተቀናሽ ለማድረግ በቂ ባላንስ የለም።');
+                return;
+            }
+
+            await client.query('UPDATE wallets SET balance = $1 WHERE user_id = $2', [newBalance, userId]);
+            await client.query('INSERT INTO transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)', 
+                [userId, action === 'add' ? 'admin_add' : 'admin_subtract', amount, `Bot adjust: ${action}`]);
+            await client.query('COMMIT');
+
+            await bot.sendMessage(chatId, `✅ ተፈጽሟል! ተጠቃሚ #${userId} አዲስ ባላንስ: ${newBalance.toFixed(2)} ብር`);
+
+            // Notify user
+            const userRes = await client.query('SELECT telegram_id FROM users WHERE id = $1', [userId]);
+            if (userRes.rows.length > 0 && userRes.rows[0].telegram_id) {
+                const notifyMsg = action === 'add' ? 
+                    `🎁 አድሚኑ ${amount} ብር ወደ ሒሳብዎ ጨምሯል!\nአዲስ ባላንስ: ${newBalance.toFixed(2)} ብር` :
+                    `⚠️ አድሚኑ ${amount} ብር ከሒሳብዎ ቀንሷል።\nአዲስ ባላንስ: ${newBalance.toFixed(2)} ብር`;
+                bot.sendMessage(userRes.rows[0].telegram_id, notifyMsg).catch(e => console.error('Bot notify fail:', e.message));
+            }
+        } finally {
+            client.release();
+        }
+    } catch (err) {
+        console.error('Bot adjust error:', err);
+        await bot.sendMessage(chatId, '❌ ስህተት ተፈጥሯል።');
+    }
+});
+
 // Approve deposit
 bot.onText(/\/approve_deposit (\d+)/, async (msg, match) => {
     const chatId = msg.chat.id;
@@ -2756,6 +2817,74 @@ app.get('/api/admin/transactions', async (req, res) => {
 });
 
 // Approve deposit via API
+// Admin: Get all users
+app.get('/api/admin/users', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT u.id, u.username, u.phone_number, w.balance 
+            FROM users u 
+            JOIN wallets w ON u.id = w.user_id 
+            ORDER BY u.id DESC
+        `);
+        res.json(result.rows);
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// Admin: Adjust user balance
+app.post('/api/admin/users/:id/adjust-balance', async (req, res) => {
+    const userId = req.params.id;
+    const { amount, action, reason } = req.body; // action: 'add' or 'subtract'
+
+    if (!amount || isNaN(amount) || amount <= 0) {
+        return res.status(400).json({ error: 'Invalid amount' });
+    }
+
+    const adjustAmount = action === 'subtract' ? -Math.abs(amount) : Math.abs(amount);
+    const description = reason || `Admin balance adjustment (${action})`;
+
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN');
+        
+        const walletRes = await client.query('SELECT balance FROM wallets WHERE user_id = $1 FOR UPDATE', [userId]);
+        if (walletRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'User wallet not found' });
+        }
+
+        const newBalance = parseFloat(walletRes.rows[0].balance) + adjustAmount;
+        if (newBalance < 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Insufficient balance for subtraction' });
+        }
+
+        await client.query('UPDATE wallets SET balance = $1, updated_at = NOW() WHERE user_id = $2', [newBalance, userId]);
+        await client.query('INSERT INTO transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)', 
+            [userId, action === 'add' ? 'admin_add' : 'admin_subtract', Math.abs(amount), description]);
+        
+        await client.query('COMMIT');
+
+        // Notify user via Bot if possible
+        const userRes = await client.query('SELECT telegram_id FROM users WHERE id = $1', [userId]);
+        if (userRes.rows.length > 0 && userRes.rows[0].telegram_id) {
+            const msg = action === 'add' ? 
+                `🎁 አድሚኑ ${amount} ብር ወደ ሒሳብዎ ጨምሯል!\nአዲስ ባላንስ: ${newBalance.toFixed(2)} ብር` :
+                `⚠️ አድሚኑ ${amount} ብር ከሒሳብዎ ቀንሷል።\nአዲስ ባላንስ: ${newBalance.toFixed(2)} ብር`;
+            bot.sendMessage(userRes.rows[0].telegram_id, msg).catch(e => console.error('Notify fail:', e.message));
+        }
+
+        res.json({ success: true, newBalance });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Balance adjust error:', err);
+        res.status(500).json({ error: 'Server error' });
+    } finally {
+        client.release();
+    }
+});
+
 app.post('/api/admin/deposits/:id/approve', async (req, res) => {
     console.log(`POST /api/admin/deposits/${req.params.id}/approve reached`);
     try {

@@ -412,11 +412,12 @@
                 <h2>የዊዝድሮው ጥያቄዎች</h2>
                 <p id="pendingWithdrawalsCount" style="color: #95a5a6; margin-top: 10px;">-</p>
             </div>
-            <div class="action-card" onclick="openSubScreen('broadcast-screen')">
-                <i>📢</i>
-                <h2>ብሮድካስት (Broadcast)</h2>
-                <p style="color: #95a5a6; margin-top: 10px;">ለሁሉም ተጠቃሚዎች መልእክት ይላኩ</p>
+            <div class="action-card" onclick="openSubScreen('users-screen')">
+                <i>👤</i>
+                <h2>ተጠቃሚዎች (Users)</h2>
+                <p style="color: #95a5a6; margin-top: 10px;">ባላንስ ማስተካከያ</p>
             </div>
+            <div class="action-card" onclick="openSubScreen('broadcast-screen')">
         </div>
     </div>
 
@@ -469,11 +470,97 @@
         </div>
     </div>
     
+    <div id="users-screen" class="sub-screen">
+        <div class="sub-screen-header">
+            <button class="close-sub-btn" onclick="closeSubScreen('users-screen')">← ተመለስ</button>
+            <h2>👤 ተጠቃሚዎች እና ባላንስ ማስተካከያ</h2>
+        </div>
+        <div class="sub-content">
+            <div class="section" style="margin-bottom: 20px;">
+                <h3>ባላንስ አስተካክል (Adjust Balance)</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px;">
+                    <input type="number" id="targetUserId" placeholder="User ID" style="padding: 10px; border-radius: 5px; border: 1px solid #444; background: #222; color: #fff;">
+                    <input type="number" id="adjustAmount" placeholder="መጠን (Amount)" style="padding: 10px; border-radius: 5px; border: 1px solid #444; background: #222; color: #fff;">
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn btn-approve" onclick="adjustBalance('add')" style="flex: 1;">➕ ጨምር</button>
+                        <button class="btn btn-reject" onclick="adjustBalance('subtract')" style="flex: 1;">➖ ቀንስ</button>
+                    </div>
+                </div>
+            </div>
+            <div class="section">
+                <div id="usersTable">
+                    <div class="loading">Loading Users...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        async function adjustBalance(action) {
+            const userId = document.getElementById('targetUserId').value;
+            const amount = document.getElementById('adjustAmount').value;
+            
+            if (!userId || !amount) {
+                alert('እባክዎ መረጃዎችን በትክክል ያስገቡ');
+                return;
+            }
+
+            if (!confirm(`እርግጠኛ ነዎት? ${amount} ብር ለተጠቃሚ #${userId} ${action === 'add' ? 'ሊጨምሩ' : 'ሊቀንሱ'} ነው?`)) return;
+
+            try {
+                const res = await fetch(`/api/admin/users/${userId}/adjust-balance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount, action })
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    alert('በተሳካ ሁኔታ ተፈጽሟል! አዲስ ባላንስ: ' + data.newBalance);
+                    loadUsers();
+                } else {
+                    alert('ስህተት: ' + data.error);
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/admin/users');
+                const users = await res.json();
+                const container = document.getElementById('usersTable');
+                
+                let html = `<table><tr><th>ID</th><th>Username</th><th>Phone</th><th>Balance</th><th>Actions</th></tr>`;
+                for (const u of users) {
+                    html += `<tr>
+                        <td>${u.id}</td>
+                        <td>${u.username}</td>
+                        <td>${u.phone_number}</td>
+                        <td>${parseFloat(u.balance).toFixed(2)} ብር</td>
+                        <td>
+                            <button class="btn" style="background: #3498db" onclick="setTargetUser(${u.id})">ይምረጡ</button>
+                        </td>
+                    </tr>`;
+                }
+                html += '</table>';
+                container.innerHTML = html;
+            } catch (err) {
+                container.innerHTML = 'Error loading users';
+            }
+        }
+
+        function setTargetUser(id) {
+            document.getElementById('targetUserId').value = id;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
         function openSubScreen(id) {
             document.getElementById(id).classList.add('active');
             if (id === 'deposits-screen') loadDeposits();
             if (id === 'withdrawals-screen') loadWithdrawals();
+            if (id === 'users-screen') loadUsers();
         }
 
         function closeSubScreen(id) {
