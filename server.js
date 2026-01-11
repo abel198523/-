@@ -2852,8 +2852,51 @@ app.get('/api/admin/users', async (req, res) => {
     }
 });
 
-// Admin: Adjust user balance
-app.post('/api/admin/users/:id/adjust-balance', async (req, res) => {
+    // Admin: Bulk adjust balance for all users
+    app.post('/api/admin/users/bulk-adjust-balance', async (req, res) => {
+        const { amount, action, reason } = req.body;
+
+        if (!amount || isNaN(amount) || amount <= 0) {
+            return res.status(400).json({ error: 'Invalid amount' });
+        }
+
+        const adjustAmount = action === 'subtract' ? -Math.abs(amount) : Math.abs(amount);
+        const description = reason || `Bulk admin balance adjustment (${action})`;
+
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            
+            // Update all wallets
+            await client.query(`
+                UPDATE wallets 
+                SET balance = CASE 
+                    WHEN balance + $1 < 0 THEN 0 
+                    ELSE balance + $1 
+                END,
+                updated_at = NOW()
+            `, [adjustAmount]);
+
+            // Record transaction for all users
+            await client.query(`
+                INSERT INTO transactions (user_id, type, amount, description)
+                SELECT user_id, $1, $2, $3 FROM wallets
+            `, [action === 'add' ? 'admin_add' : 'admin_subtract', Math.abs(amount), description]);
+            
+            await client.query('COMMIT');
+
+            res.json({ success: true, message: `Successfully adjusted balance for all users` });
+        } catch (err) {
+            await client.query('ROLLBACK');
+            console.error('Bulk balance adjust error:', err);
+            res.status(500).json({ error: 'Server error' });
+        } finally {
+            client.release();
+        }
+    });
+
+    // Admin: Adjust user balance
+    app.post('/api/admin/users/:id/adjust-balance', async (req, res) => {
     const userId = req.params.id;
     const { amount, action, reason } = req.body; // action: 'add' or 'subtract'
 

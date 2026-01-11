@@ -486,6 +486,17 @@
             </div>
 
             <div class="section" style="margin-bottom: 20px;">
+                <h3>ለሁሉም ተጠቃሚዎች ባላንስ ጨምር/ቀንስ (Bulk Adjust)</h3>
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <input type="number" id="bulkAdjustAmount" placeholder="መጠን (Amount)" style="flex: 1; padding: 10px; border-radius: 5px; border: 1px solid #444; background: #222; color: #fff;">
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn btn-approve" onclick="bulkAdjustBalance('add')" style="flex: 1;">➕ ለሁሉም ጨምር</button>
+                        <button class="btn btn-reject" onclick="bulkAdjustBalance('subtract')" style="flex: 1;">➖ ከሁሉም ቀንስ</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section" style="margin-bottom: 20px;">
                 <h3>ባላንስ አስተካክል (Adjust Balance)</h3>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 15px;">
                     <input type="number" id="targetUserId" placeholder="User ID" style="padding: 10px; border-radius: 5px; border: 1px solid #444; background: #222; color: #fff;">
@@ -505,6 +516,35 @@
     </div>
 
     <script>
+        async function bulkAdjustBalance(action) {
+            const amount = document.getElementById('bulkAdjustAmount').value;
+            
+            if (!amount) {
+                alert('እባክዎ መጠን ያስገቡ');
+                return;
+            }
+
+            if (!confirm(`እርግጠኛ ነዎት? ${amount} ብር ለሁሉም ተጠቃሚዎች ${action === 'add' ? 'ሊጨምሩ' : 'ሊቀንሱ'} ነው?`)) return;
+
+            try {
+                const res = await fetch('/api/admin/users/bulk-adjust-balance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount, action })
+                });
+                
+                const data = await res.json();
+                if (res.ok) {
+                    alert('በተሳካ ሁኔታ ለሁሉም ተጠቃሚዎች ተፈጽሟል!');
+                    loadUsers();
+                } else {
+                    alert('ስህተት: ' + data.error);
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
         async function adjustBalance(action) {
             const userId = document.getElementById('targetUserId').value;
             const amount = document.getElementById('adjustAmount').value;
