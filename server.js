@@ -41,7 +41,7 @@ dns.setDefaultResultOrder('verbatim');
 const app = express();
 
 // Maintenance Mode Flag
-const MAINTENANCE_MODE = process.env.MAINTENANCE_MODE === 'true' || true; // Set to true for Render deployment fallback
+const MAINTENANCE_MODE = false; // Disabled as requested, logic moved to game restriction
 
 app.use((req, res, next) => {
     if (MAINTENANCE_MODE) {
@@ -159,10 +159,6 @@ bot.on('message', (msg) => {
 bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
     const chatId = msg.chat.id;
     const telegramId = msg.from.id;
-
-    if (MAINTENANCE_MODE) {
-        return bot.sendMessage(chatId, "🚧 <b>ሮያል ቢንጎ ለጥቂት ጊዜ ለጥገና ተዘግቷል።</b>\n\nበቅርቡ እንመለሳለን፣ ስለ ትዕግስትዎ እናመሰግናለን! 🙏", { parse_mode: 'HTML' });
-    }
 
     const referralCode = match ? match[1] : null;
 
@@ -1927,6 +1923,12 @@ wss.on('connection', (ws) => {
                     
                 case 'confirm_card':
                     if (gameState.phase === 'selection' && player) {
+                        ws.send(JSON.stringify({ 
+                            type: 'error', 
+                            error: 'ቢንጎ ለጥገና ለጥቂት ጊዜ ተዘግቷል፤ በቅርቡ እንመለሳለን።' 
+                        }));
+                        break;
+                        
                         if (!player.userId) {
                             ws.send(JSON.stringify({ 
                                 type: 'error', 
