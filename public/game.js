@@ -415,6 +415,10 @@ function markCardAsTaken(cardId) {
 }
 
 function showCardPreview(cardId) {
+    if (userProfile && parseFloat(userProfile.balance) < 10) {
+        showStatus('ካርድ ለመምረጥ ቢያንስ 10 ብር ባላንስ ሊኖርዎት ይገባል።', 'error');
+        return;
+    }
     console.log('Showing preview for card:', cardId);
     previewCardId = cardId;
     const modal = document.getElementById('card-preview-modal');
