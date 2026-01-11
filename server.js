@@ -51,9 +51,16 @@ if (!MINI_APP_URL) {
         MINI_APP_URL = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
     } else if (process.env.RENDER_EXTERNAL_URL) {
         MINI_APP_URL = process.env.RENDER_EXTERNAL_URL;
+    } else if (process.env.RENDER_SERVER_URL) { // Render sometimes uses this
+        MINI_APP_URL = process.env.RENDER_SERVER_URL;
     } else if (RENDER_SERVER_URL) {
         MINI_APP_URL = RENDER_SERVER_URL;
     }
+}
+
+// Ensure MINI_APP_URL doesn't have trailing slash for consistency
+if (MINI_APP_URL && MINI_APP_URL.endsWith('/')) {
+    MINI_APP_URL = MINI_APP_URL.slice(0, -1);
 }
 
 console.log('MINI_APP_URL configuration:', {
@@ -1625,37 +1632,39 @@ function startNumberCalling() {
 }
 
 // Global game loop for selection phase
-setInterval(() => {
-    if (gameState.phase === 'selection') {
-        gameState.timeLeft--;
-        
-        broadcast({
-            type: 'timer_update',
-            phase: 'selection',
-            timeLeft: gameState.timeLeft,
-            participantsCount: getConfirmedPlayersCount()
-        });
+if (!global.selectionInterval) {
+    global.selectionInterval = setInterval(() => {
+        if (gameState.phase === 'selection') {
+            gameState.timeLeft--;
+            
+            broadcast({
+                type: 'timer_update',
+                phase: 'selection',
+                timeLeft: gameState.timeLeft,
+                participantsCount: getConfirmedPlayersCount()
+            });
 
-        if (gameState.timeLeft <= 0) {
-            const confirmedPlayers = getConfirmedPlayersCount();
-            if (confirmedPlayers >= 1) {
-                console.log('Selection phase ended. Starting game with ' + confirmedPlayers + ' players.');
-                startGamePhase();
-                startNumberCalling();
-            } else {
-                console.log('Not enough players (needs 1). Resetting selection timer.');
-                gameState.timeLeft = SELECTION_TIME;
-                broadcast({
-                    type: 'timer_update',
-                    phase: 'selection',
-                    timeLeft: gameState.timeLeft,
-                    participantsCount: confirmedPlayers,
-                    message: 'ተጨማሪ ተጫዋቾች በመጠባበቅ ላይ...'
-                });
+            if (gameState.timeLeft <= 0) {
+                const confirmedPlayers = getConfirmedPlayersCount();
+                if (confirmedPlayers >= 1) {
+                    console.log('Selection phase ended. Starting game with ' + confirmedPlayers + ' players.');
+                    startGamePhase();
+                    startNumberCalling();
+                } else {
+                    console.log('Not enough players (needs 1). Resetting selection timer.');
+                    gameState.timeLeft = SELECTION_TIME;
+                    broadcast({
+                        type: 'timer_update',
+                        phase: 'selection',
+                        timeLeft: gameState.timeLeft,
+                        participantsCount: confirmedPlayers,
+                        message: 'ተጨማሪ ተጫዋቾች በመጠባበቅ ላይ...'
+                    });
+                }
             }
         }
-    }
-}, 1000);
+    }, 1000);
+}
 
 function stopNumberCalling() {
     if (numberCallInterval) {
