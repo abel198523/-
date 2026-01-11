@@ -2055,7 +2055,6 @@ wss.on('connection', (ws) => {
                     
                 case 'select_card':
                     if (gameState.phase === 'selection' && gameState.players.has(playerId)) {
-                        // Check if player has at least 10 ETB to select a card
                         const player = gameState.players.get(playerId);
                         if (!player.userId) {
                             ws.send(JSON.stringify({ type: 'error', message: 'እባክዎ መጀመሪያ ይግቡ (Please login)' }));
@@ -2066,7 +2065,8 @@ wss.on('connection', (ws) => {
                             .then(res => {
                                 const row = res.rows[0];
                                 const balance = row ? (parseFloat(row.balance || 0) + parseFloat(row.winning_balance || 0)) : 0;
-                                if (balance < 10) {
+                                if (balance < (gameState.stakeAmount || 10)) {
+                                    player.selectedCardId = null; // Clear local card selection
                                     ws.send(JSON.stringify({
                                         type: 'error',
                                         message: 'ካርድ ለመምረጥ ቢያንስ 10 ብር ባላንስ ሊኖርዎት ይገባል።'
@@ -2074,6 +2074,7 @@ wss.on('connection', (ws) => {
                                     return;
                                 }
                                 player.selectedCardId = data.cardId;
+                                console.log(`[DEBUG] Card ${data.cardId} selected by ${player.username}`);
                             })
                             .catch(err => console.error('Error checking balance during selection:', err));
                     }

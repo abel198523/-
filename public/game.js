@@ -832,17 +832,16 @@ function handleWebSocketMessage(data) {
     if (data.type === 'error') {
         showToast(data.message);
         if (data.message.includes('ባላንስ') || data.message.includes('ቅነሳ')) {
+            console.log('[DEBUG] Insufficient balance error received, resetting selection');
             selectedCardId = null;
             previewCardId = null;
             cardConfirmed = false;
-            document.querySelectorAll('.card-number-btn').forEach(btn => {
-                if (!btn.classList.contains('taken')) {
-                    btn.classList.remove('selected');
-                    btn.style.backgroundColor = '';
-                    btn.style.borderColor = '';
-                    btn.style.color = '';
-                }
-            });
+            
+            // Re-render the selection grid to clear highlights
+            if (document.getElementById('selection-screen').style.display !== 'none') {
+                generateCardSelection();
+            }
+            
             const status = document.getElementById('confirmation-status');
             if (status) status.textContent = '';
         }
