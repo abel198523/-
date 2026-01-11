@@ -418,7 +418,10 @@
                 <p style="color: #95a5a6; margin-top: 10px;">ባላንስ ማስተካከያ</p>
             </div>
             <div class="action-card" onclick="openSubScreen('broadcast-screen')">
-        </div>
+                <i>📢</i>
+                <h2>ብሮድካስት (Broadcast)</h2>
+                <p style="color: #95a5a6; margin-top: 10px;">መልእክት ለሁሉም መላኪያ</p>
+            </div>
     </div>
 
     <!-- Sub Screens -->
@@ -645,6 +648,43 @@
         function closeSubScreen(id) {
             document.getElementById(id).classList.remove('active');
             loadData(); // Update counts on main screen
+        }
+
+        async function sendBroadcast() {
+            const message = document.getElementById('broadcastMessage').value;
+            const imageFile = document.getElementById('broadcastImageFile').files[0];
+            const statusDiv = document.getElementById('broadcastStatus');
+            
+            if (!message) {
+                alert('እባክዎ መልእክት ያስገቡ');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('message', message);
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+
+            statusDiv.innerHTML = '<div class="loading">በመላክ ላይ... (Sending...)</div>';
+
+            try {
+                const response = await fetch('/api/admin/broadcast', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (result.success) {
+                    statusDiv.innerHTML = '<div style="color: #2ecc71; font-weight: bold;">✅ መልእክቱ በተሳካ ሁኔታ ለሁሉም ተልኳል!</div>';
+                    document.getElementById('broadcastMessage').value = '';
+                    document.getElementById('broadcastImageFile').value = '';
+                } else {
+                    statusDiv.innerHTML = `<div style="color: #e74c3c;">❌ ስህተት፡ ${result.error || 'መላክ አልተቻለም'}</div>`;
+                }
+            } catch (err) {
+                statusDiv.innerHTML = `<div style="color: #e74c3c;">❌ ስህተት፡ ${err.message}</div>`;
+            }
         }
 
         async function loadData() {
