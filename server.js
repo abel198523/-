@@ -1284,27 +1284,23 @@ bot.on('callback_query', async (callbackQuery) => {
             const withdrawalId = data.replace('approve_with_id_', '');
             console.log(`Bot approving withdrawal: ${withdrawalId}`);
             
-            const withdrawal = await db.query('SELECT w.*, u.telegram_id as user_telegram_id FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.id = $1', [withdrawalId]);
-            
-            if (withdrawal.rows.length === 0 || withdrawal.rows[0].status !== 'pending') {
-                await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ አልተገኘም ወይም ቀድሞ ተፈጽሟል።' });
-                return;
-            }
-
-            const w = withdrawal.rows[0];
-            const balanceCheck = await db.query('SELECT balance FROM wallets WHERE user_id = $1', [w.user_id]);
-            
-            if (parseFloat(balanceCheck.rows[0]?.balance || 0) < w.amount) {
-                await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ ተጠቃሚው በቂ ሒሳብ የለውም።', show_alert: true });
-                return;
-            }
-
-            const client = await db.db.db.pool.connect();
+            const client = await db.pool.connect();
             try {
                 await client.query('BEGIN');
+                
+                const withdrawal = await client.query('SELECT w.*, u.telegram_id as user_telegram_id FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.id = $1 FOR UPDATE', [withdrawalId]);
+                
+                if (withdrawal.rows.length === 0 || withdrawal.rows[0].status !== 'pending') {
+                    await client.query('ROLLBACK');
+                    await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ አልተገኘም ወይም ቀድሞ ተፈጽሟል።' });
+                    return;
+                }
+
+                const w = withdrawal.rows[0];
+                
                 await client.query('UPDATE withdrawals SET status = $1, processed_at = NOW() WHERE id = $2', ['approved', withdrawalId]);
-                await client.query('UPDATE wallets SET balance = balance - $1, updated_at = NOW() WHERE user_id = $2', [w.amount, w.user_id]);
-                await client.query('INSERT INTO transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)', [w.user_id, 'withdrawal', w.amount, `Withdrawal to ${w.phone_number}`]);
+                await client.query('INSERT INTO transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)', [w.user_id, 'withdrawal_confirmed', w.amount, `Withdrawal to ${w.phone_number} confirmed`]);
+                
                 await client.query('COMMIT');
 
                 await bot.answerCallbackQuery(callbackQuery.id, { text: '✅ ማውጣቱ ፀድቋል!' });
@@ -1320,7 +1316,8 @@ bot.on('callback_query', async (callbackQuery) => {
                 }
             } catch (e) {
                 await client.query('ROLLBACK');
-                throw e;
+                console.error('Withdrawal approval error:', e);
+                await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ ስህተት ተፈጥሯል።' });
             } finally {
                 client.release();
             }
@@ -1331,26 +1328,44 @@ bot.on('callback_query', async (callbackQuery) => {
             const withdrawalId = data.replace('reject_with_id_', '');
             console.log(`Bot rejecting withdrawal: ${withdrawalId}`);
             
-            const withdrawal = await db.query('SELECT w.*, u.telegram_id as user_telegram_id FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.id = $1', [withdrawalId]);
-            
-            if (withdrawal.rows.length === 0 || withdrawal.rows[0].status !== 'pending') {
-                await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ አልተገኘም።' });
-                return;
-            }
+            const client = await db.pool.connect();
+            try {
+                await client.query('BEGIN');
+                
+                const withdrawal = await client.query('SELECT w.*, u.telegram_id as user_telegram_id FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.id = $1 FOR UPDATE', [withdrawalId]);
+                
+                if (withdrawal.rows.length === 0 || withdrawal.rows[0].status !== 'pending') {
+                    await client.query('ROLLBACK');
+                    await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ አልተገኘም ወይም ቀድሞ ተረባርቧል።' });
+                    return;
+                }
 
-            const w = withdrawal.rows[0];
-            await db.query('UPDATE withdrawals SET status = $1, processed_at = NOW() WHERE id = $2', ['rejected', withdrawalId]);
+                const w = withdrawal.rows[0];
+                
+                // Refund the balance
+                await client.query('UPDATE wallets SET balance = balance + $1, updated_at = NOW() WHERE user_id = $2', [w.amount, w.user_id]);
+                await client.query('UPDATE withdrawals SET status = $1, processed_at = NOW() WHERE id = $2', ['rejected', withdrawalId]);
+                await client.query('INSERT INTO transactions (user_id, type, amount, description) VALUES ($1, $2, $3, $4)', [w.user_id, 'refund', w.amount, `Refund for rejected withdrawal #${withdrawalId}`]);
+                
+                await client.query('COMMIT');
 
-            await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ ማውጣቱ ውድቅ ተደርጓል!' });
-            const formattedText = message.text.replace(/💸 ማውጣት ጥያቄ/g, '❌ <b>ማውጣት ጥያቄ (ውድቅ ተደርጓል)</b>');
-            await bot.editMessageText(formattedText, {
-                chat_id: chatId,
-                message_id: message.message_id,
-                parse_mode: 'HTML'
-            });
+                await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ ማውጣቱ ውድቅ ተደርጓል (ገንዘቡ ተመልሷል)!' });
+                const formattedText = message.text.replace(/💸 ማውጣት ጥያቄ/g, '❌ <b>ማውጣት ጥያቄ (ውድቅ ተደርጓል - ገንዘቡ ተመልሷል)</b>');
+                await bot.editMessageText(formattedText, {
+                    chat_id: chatId,
+                    message_id: message.message_id,
+                    parse_mode: 'HTML'
+                });
 
-            if (w.user_telegram_id) {
-                await bot.sendMessage(w.user_telegram_id, `❌ የገንዘብ ማውጣት ጥያቄዎ ተቀባይነት አላገኘም።`);
+                if (w.user_telegram_id) {
+                    await bot.sendMessage(w.user_telegram_id, `❌ የገንዘብ ማውጣት ጥያቄዎ ተቀባይነት አላገኘም። ${w.amount} ብር ወደ ሒሳብዎ ተመልሷል።`);
+                }
+            } catch (e) {
+                await client.query('ROLLBACK');
+                console.error('Withdrawal rejection error:', e);
+                await bot.answerCallbackQuery(callbackQuery.id, { text: '❌ ስህተት ተፈጥሯል።' });
+            } finally {
+                client.release();
             }
         }
 
