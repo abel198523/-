@@ -529,14 +529,11 @@ bot.onText(/🏦 CBE Birr/, async (msg) => {
     const state = userStates.get(telegramId);
     
     if (state?.action === 'deposit' && state?.step === 'method') {
-        state.paymentMethod = 'cbe_birr';
-        state.step = 'amount';
-        userStates.set(telegramId, state);
-        
         await bot.sendMessage(chatId, 
-            '🏦 CBE Birr ተመርጧል\n\n💵 ማስገባት የሚፈልጉትን መጠን (ብር) ያስገቡ:',
-            { reply_markup: { keyboard: [[{ text: "❌ ሰርዝ" }]], resize_keyboard: true } }
+            '🏦 CBE Birr ለጊዜው በጥገና ላይ ነው (Under Maintenance)።\n\nእባክዎ ለጊዜው በ 📱 Telebirr ይጠቀሙ።',
+            { reply_markup: getMainKeyboard(telegramId) }
         );
+        userStates.delete(telegramId);
     }
 });
 
