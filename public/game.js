@@ -829,6 +829,26 @@ function handleWebSocketMessage(data) {
         return;
     }
 
+    if (data.type === 'error') {
+        showToast(data.message);
+        if (data.message.includes('ባላንስ') || data.message.includes('ቅነሳ')) {
+            selectedCardId = null;
+            previewCardId = null;
+            cardConfirmed = false;
+            document.querySelectorAll('.card-number-btn').forEach(btn => {
+                if (!btn.classList.contains('taken')) {
+                    btn.classList.remove('selected');
+                    btn.style.backgroundColor = '';
+                    btn.style.borderColor = '';
+                    btn.style.color = '';
+                }
+            });
+            const status = document.getElementById('confirmation-status');
+            if (status) status.textContent = '';
+        }
+        return;
+    }
+
     switch (data.type) {
         case 'game_cancelled':
             showToast(data.message);

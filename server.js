@@ -2087,9 +2087,10 @@ wss.on('connection', (ws) => {
                             break;
                         }
 
-                        db.query('SELECT balance FROM wallets WHERE user_id = $1', [player.userId])
+                        db.query('SELECT balance, winning_balance FROM wallets WHERE user_id = $1', [player.userId])
                             .then(async res => {
-                                const balance = res.rows.length > 0 ? parseFloat(res.rows[0].balance) : 0;
+                                const row = res.rows[0];
+                                const balance = row ? (parseFloat(row.balance || 0) + parseFloat(row.winning_balance || 0)) : 0;
                                 const stakeAmount = 10; // Fixed for now
 
                                 if (balance < stakeAmount) {
@@ -2113,8 +2114,10 @@ wss.on('connection', (ws) => {
 
                                     // Deduct stake
                                     const deductionResult = await Wallet.deductBalance(player.userId, stakeAmount, `Stake for game #${currentGameId}`);
-                                    if (!deductionResult) {
-                                        ws.send(JSON.stringify({ type: 'error', message: 'የሒሳብ ቅነሳ አልተሳካም።' }));
+                                    if (!deductionResult || (deductionResult.success === false)) {
+                                        player.isCardConfirmed = false;
+                                        player.selectedCardId = null;
+                                        ws.send(JSON.stringify({ type: 'error', message: 'የሒሳብ ቅነሳ አልተሳካም። በቂ ባላንስ እንዳለዎት ያረጋግጡ።' }));
                                         return;
                                     }
 
