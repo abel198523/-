@@ -427,27 +427,9 @@ function generateCardSelection() {
             
             console.log('Card clicked:', cardId);
             
-            // Check balance before showing preview
-            fetch(`/api/profile/${currentUserId}`)
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success && parseFloat(data.profile.balance) < currentStake) {
-                        showToast(`ያለዎት ባላንስ ከ ${currentStake} ብር ያነሰ ነው። እባክዎ ዲፖዚት ያድርጉ።`);
-                        return;
-                    }
-                    if (!cardConfirmed) {
-                        showCardPreview(cardId);
-                    }
-                })
-                .catch(err => {
-                    console.error('Balance check error:', err);
-                    // Fallback to local profile check if API fails
-                    if (window.userProfile && parseFloat(window.userProfile.balance) < currentStake) {
-                        showToast(`ያለዎት ባላንስ ከ ${currentStake} ብር ያነሰ ነው።`);
-                        return;
-                    }
-                    if (!cardConfirmed) showCardPreview(cardId);
-                });
+            if (!cardConfirmed) {
+                showCardPreview(cardId);
+            }
         });
         
         cardElement.addEventListener('touchstart', function(e) {
