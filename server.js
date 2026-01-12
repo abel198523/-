@@ -2593,7 +2593,7 @@ app.post('/api/bet', async (req, res) => {
         const telegramId = parseInt(userId) || 0;
 
         const userResult = await db.query(
-            'SELECT u.id, w.balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
+            'SELECT u.id, w.balance, w.winning_balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
             [telegramId]
         );
 
@@ -2602,20 +2602,34 @@ app.post('/api/bet', async (req, res) => {
         }
 
         const internalUserId = userResult.rows[0].id;
-        const currentBalance = parseFloat(userResult.rows[0].balance) || 0;
+        const mainBalance = parseFloat(userResult.rows[0].balance) || 0;
+        const winningBalance = parseFloat(userResult.rows[0].winning_balance) || 0;
+        const totalBalance = mainBalance + winningBalance;
         
-        if (currentBalance < stakeAmount) {
+        if (totalBalance < stakeAmount) {
             return res.json({ success: false, message: 'Insufficient balance' });
         }
 
-        const newBalance = currentBalance - stakeAmount;
+        // Deduct from main balance first, then winning balance
+        let amountToDeduct = stakeAmount;
+        let newMainBalance = mainBalance;
+        let newWinningBalance = winningBalance;
+
+        if (newMainBalance >= amountToDeduct) {
+            newMainBalance -= amountToDeduct;
+            amountToDeduct = 0;
+        } else {
+            amountToDeduct -= newMainBalance;
+            newMainBalance = 0;
+            newWinningBalance -= amountToDeduct;
+        }
         
         await db.query(
-            'UPDATE wallets SET balance = $1 WHERE user_id = $2',
-            [newBalance, internalUserId]
+            'UPDATE wallets SET balance = $1, winning_balance = $2 WHERE user_id = $3',
+            [newMainBalance, newWinningBalance, internalUserId]
         );
 
-        res.json({ success: true, balance: newBalance });
+        res.json({ success: true, balance: newMainBalance + newWinningBalance });
     } catch (err) {
         console.error('Bet error:', err);
         res.status(500).json({ success: false, message: 'Bet failed' });
