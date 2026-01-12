@@ -341,8 +341,8 @@ function initializeLandingScreen() {
                     const totalBalance = data.total_balance !== undefined ? data.total_balance : (parseFloat(data.balance) || 0);
                     const stake = data.stake || 10;
                     
-                    // Allow access if total balance is greater than 10
-                    if (totalBalance <= 10) {
+                    // Allow access if total balance is greater than or equal to 10
+                    if (totalBalance < 10) {
                         showNoBalanceModal(totalBalance, stake);
                         return;
                     }
