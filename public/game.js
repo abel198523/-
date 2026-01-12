@@ -579,6 +579,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+const markedNumbers = new Set();
+
 function renderPlayerCard(cardId) {
     const cardContainer = document.getElementById('player-bingo-card');
     if (!cardContainer) return;
@@ -599,11 +601,20 @@ function renderPlayerCard(cardId) {
                 cell.textContent = '★';
             } else {
                 cell.textContent = num;
+                // Restore mark if it was already marked manually
+                if (markedNumbers.has(num)) {
+                    cell.classList.add('marked');
+                }
             }
             
             cell.addEventListener('click', function() {
-                if (num !== 0) {
-                    this.classList.toggle('marked');
+                if (rowIndex === 2 && colIndex === 2) return; // Don't unmark free space
+                if (this.classList.contains('marked')) {
+                    this.classList.remove('marked');
+                    markedNumbers.delete(num);
+                } else {
+                    this.classList.add('marked');
+                    markedNumbers.add(num);
                 }
             });
             
@@ -958,7 +969,7 @@ function handleWebSocketMessage(data) {
 
             if (data.calledNumbers && data.calledNumbers.length > 0) {
                 data.calledNumbers.forEach((num, index) => {
-                    markCalledNumber(num);
+                    // markCalledNumber(num); // Auto-marking disabled
                     markMasterNumber(num);
                     if (index === data.calledNumbers.length - 1) {
                         displayCalledNumber(getLetterForNumber(num), num);
@@ -971,7 +982,7 @@ function handleWebSocketMessage(data) {
         case 'number_called':
             console.log('Number called:', data.letter + data.number);
             displayCalledNumber(data.letter, data.number);
-            markCalledNumber(data.number);
+            // markCalledNumber(data.number); // Auto-marking disabled
             markMasterNumber(data.number);
             
             // Update called count
@@ -1483,13 +1494,8 @@ function updatePhaseDisplay(phase) {
 
 function markCalledNumber(number) {
     calledNumbersSet.add(number);
-    
-    const cells = document.querySelectorAll('.player-card-cell');
-    cells.forEach(cell => {
-        if (parseInt(cell.dataset.number) === number) {
-            cell.classList.add('called');
-        }
-    });
+    // Auto-marking on player card is now disabled.
+    // The player must click cells manually to mark them.
 }
 
 // Bingo button functionality
