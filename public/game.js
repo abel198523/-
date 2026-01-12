@@ -341,12 +341,14 @@ function initializeLandingScreen() {
             fetch(`/api/wallet-info/${currentUserId}`)
                 .then(res => res.json())
                 .then(data => {
-                    const totalBalance = data.total_balance !== undefined ? data.total_balance : (parseFloat(data.balance) || 0);
-                    const stake = data.stake || 10;
+                    const totalBalance = data.total_balance !== undefined ? parseFloat(data.total_balance) : (parseFloat(data.balance) || 0);
+                    const requiredStake = parseFloat(currentStake) || 10;
                     
-                    // Allow access if total balance is greater than or equal to 10
-                    if (totalBalance < 10) {
-                        showNoBalanceModal(totalBalance, stake);
+                    console.log(`Balance check: Total=${totalBalance}, Required=${requiredStake}`);
+
+                    // Allow access if total balance is greater than or equal to the required stake
+                    if (totalBalance < requiredStake) {
+                        showNoBalanceModal(totalBalance, requiredStake);
                         return;
                     }
                     
