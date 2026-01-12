@@ -2177,16 +2177,20 @@ wss.on('connection', (ws) => {
                                     startWinnerDisplay({
                                         userId: player.userId,
                                         username: player.username,
+                                        phoneNumber: player.phone_number || player.phoneNumber || '---',
                                         cardId: player.selectedCardId,
-                                        prize: prizeAmount
+                                        prize: prizeAmount,
+                                        pattern: winPattern
                                     });
                                 }).catch(err => {
                                     console.error('Error crediting win prize:', err);
                                     startWinnerDisplay({
                                         userId: player.userId,
                                         username: player.username,
+                                        phoneNumber: player.phone_number || player.phoneNumber || '---',
                                         cardId: player.selectedCardId,
-                                        prize: prizeAmount
+                                        prize: prizeAmount,
+                                        pattern: winPattern
                                     });
                                 });
                             } else {
