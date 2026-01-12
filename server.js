@@ -747,8 +747,9 @@ bot.on('message', async (msg) => {
             const rawText = text.trim();
             
             // ✅ IMPROVED PARSING: Handle long texts and extract Transaction ID and Amount
-            const txIdPattern = /(?:ቁጥርዎ|receipt\/|ቁጥርዎ\s*|Transaction ID:|Ref:)\s*([A-Z0-9]{8,25})/i;
-            const amountPattern = /([\d,.]+)\s*ብር/;
+            // Added support for "transaction number is DAC7QWOQO5" and "receipt/DAC7QWOQO5"
+            const txIdPattern = /(?:ቁጥርዎ|receipt\/|ቁጥርዎ\s*|Transaction ID:|Ref:|transaction number is)\s*([A-Z0-9]{8,25})/i;
+            const amountPattern = /(?:ETB|ብር)\s*([\d,.]+)|([\d,.]+)\s*ብር/;
             
             const txIdMatch = rawText.match(txIdPattern);
             const amountMatch = rawText.match(amountPattern);
@@ -773,10 +774,11 @@ bot.on('message', async (msg) => {
             }
             
             if (amountMatch) {
-                const parsedAmount = parseFloat(amountMatch[1].replace(/,/g, ''));
+                const amountStr = amountMatch[1] || amountMatch[2];
+                const parsedAmount = parseFloat(amountStr.replace(/,/g, ''));
                 if (!isNaN(parsedAmount)) {
                     finalAmount = parsedAmount;
-                    console.log(`Extracted Amount from user input: ${finalAmount}`);
+                    console.log(`Extracted Amount: ${finalAmount}`);
                 }
             }
 
