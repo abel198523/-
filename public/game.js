@@ -274,7 +274,10 @@ async function loadProfile() {
             if (phoneEl) phoneEl.textContent = profile.phoneNumber || '---';
             
             const balanceEl = document.getElementById('profile-balance');
-            if (balanceEl) balanceEl.textContent = `${parseFloat(profile.balance).toFixed(2)} ETB`;
+            if (balanceEl) {
+                const total = (parseFloat(profile.balance) || 0) + (parseFloat(profile.winning_balance) || 0);
+                balanceEl.textContent = `${total.toFixed(2)} ETB`;
+            }
             
             const gamesEl = document.getElementById('profile-total-games');
             if (gamesEl) gamesEl.textContent = profile.totalGames || 0;
