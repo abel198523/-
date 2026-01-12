@@ -90,7 +90,7 @@ const RENDER_SERVER_URL = process.env.RENDER_SERVER_URL;
 let MINI_APP_URL = process.env.MINI_APP_URL;
 
 if (!MINI_APP_URL) {
-    if (process.env.REPLIT_DOMAINS) {
+    if (process.env.REPLIT_DOMAINS && typeof process.env.REPLIT_DOMAINS === 'string') {
         MINI_APP_URL = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
     } else if (process.env.RENDER_EXTERNAL_URL) {
         MINI_APP_URL = process.env.RENDER_EXTERNAL_URL;
@@ -320,7 +320,8 @@ const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 // Helper function to get main keyboard
 function getMainKeyboard(telegramId) {
     // Force use the current server's URL for testing in Replit
-    const currentUrl = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+    const currentDomain = process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(',')[0] : (process.env.RENDER_EXTERNAL_URL || MINI_APP_URL || '');
+    const currentUrl = currentDomain.startsWith('http') ? currentDomain : `https://${currentDomain}`;
     const miniAppUrlWithId = `${currentUrl}${currentUrl.includes('?') ? '&' : '?'}tg_id=${telegramId}`;
     
     console.log(`[DEBUG] Generating keyboard with URL: ${miniAppUrlWithId}`);
