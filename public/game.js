@@ -1319,7 +1319,6 @@ function showWinnerDisplay(winner) {
                 ${winner.phoneNumber && winner.phoneNumber !== '---' ? `<p style="font-size: 0.9em; color: #00f2ff; margin-bottom: 5px;">Phone: ${winner.phoneNumber}</p>` : ''}
                 <p>ካርድ: #${winner.cardId}</p>
                 <p style="color: #ffd700; font-size: 1.2em; font-weight: 800; margin-top: 10px;">ሽልማት: ${winner.prize || 0} ብር</p>
-                <p style="color: #ffd700; font-size: 0.9em; margin-top: 5px;">የማሸነፊያ መስመር: ${getPatternName(winner.pattern.type)}</p>
                 <div id="winner-card-display" class="player-game-card" style="width: 150px; height: 150px; margin: 15px auto; font-size: 0.6em; gap: 2px;"></div>
             </div>
             <div id="return-countdown" class="return-timer">ወደ ካርድ መምረጫ ለመመለስ 5 ሰከንድ ቀርቷል...</div>
