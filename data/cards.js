@@ -101,105 +101,89 @@ const BINGO_CARDS = {
   100: [[5,25,45,50,61],[8,28,33,53,64],[11,16,0,56,67],[14,19,39,59,70],[2,22,42,47,73]]
 };
 
+/**
+ * የቢንጎ ማረጋገጫ
+ * @param {number} cardId - የተመረጠው የካርድ መለያ ቁጥር
+ * @param {Array} calledNumbers - የወጡ ቁጥሮች ዝርዝር
+ */
 function validateBingo(cardId, calledNumbers) {
-    const cardData = BINGO_CARDS[cardId];
-    if (!cardData) return null;
-    
-    // Convert to a Set of numbers for fast lookup and strict typing
-    // Ensure all elements are numbers and filter out null/undefined
-    const calledSet = new Set();
-    if (Array.isArray(calledNumbers)) {
-        calledNumbers.forEach(n => {
-            if (n !== null && n !== undefined) calledSet.add(Number(n));
-        });
-    }
-    calledSet.add(0); // FREE space is always considered called
-    
-    console.log(`[DEBUG] Validating Bingo for card ${cardId}`);
-    console.log(`[DEBUG] Called numbers in Set:`, Array.from(calledSet));
+    const card = BINGO_CARDS[cardId];
+    if (!card) return null;
 
-    let winningPatterns = [];
+    // 1. የወጡ ቁጥሮችን ወደ Number በመቀየር በ Set ውስጥ ማስቀመጥ (ለፈጣን ፍለጋ)
+    const calledSet = new Set(calledNumbers.map(n => Number(n)));
+    
+    // የቢንጎ ህግ፡ መሃል ቁጥር (2,2) ሁልጊዜ እንደወጣ ይቆጠራል
+    // ካርዱ ላይ 0 ተብሎ ካልተቀመጠ እዚህ ጋር በግዳጅ መያዝ አለበት
+    calledSet.add(0); 
+    const centerNum = Number(card[2][2]);
+    calledSet.add(centerNum);
 
-    // Check rows
-    for (let row = 0; row < 5; row++) {
-        let rowComplete = true;
-        let indices = [];
-        for (let col = 0; col < 5; col++) {
-            const num = Number(cardData[row][col]);
-            indices.push(row * 5 + col);
-            if (num !== 0 && !calledSet.has(num)) {
-                rowComplete = false;
-                break;
-            }
-        }
-        if (rowComplete) {
-            winningPatterns.push({ type: 'row', index: row, indices });
-        }
-    }
-    
-    // Check columns
-    for (let col = 0; col < 5; col++) {
-        let colComplete = true;
-        let indices = [];
-        for (let row = 0; row < 5; row++) {
-            const num = Number(cardData[row][col]);
-            indices.push(row * 5 + col);
-            if (num !== 0 && !calledSet.has(num)) {
-                colComplete = false;
-                break;
-            }
-        }
-        if (colComplete) {
-            winningPatterns.push({ type: 'column', index: col, indices });
-        }
-    }
-    
-    // Check diagonals
-    let diag1Complete = true;
-    let diag1Indices = [];
-    let diag2Complete = true;
-    let diag2Indices = [];
-    for (let i = 0; i < 5; i++) {
-        const num1 = Number(cardData[i][i]);
-        diag1Indices.push(i * 5 + i);
-        if (num1 !== 0 && !calledSet.has(num1)) diag1Complete = false;
-        
-        const num2 = Number(cardData[i][4 - i]);
-        diag2Indices.push(i * 5 + (4 - i));
-        if (num2 !== 0 && !calledSet.has(num2)) diag2Complete = false;
-    }
-    
-    if (diag1Complete) winningPatterns.push({ type: 'diagonal', index: 1, indices: diag1Indices });
-    if (diag2Complete) winningPatterns.push({ type: 'diagonal', index: 2, indices: diag2Indices });
-    
-    // Check corners
-    const cornerIndices = [0, 4, 20, 24];
-    let cornersComplete = true;
-    for (const idx of cornerIndices) {
-        const r = Math.floor(idx / 5);
-        const c = idx % 5;
-        const num = Number(cardData[r][c]);
-        if (num !== 0 && !calledSet.has(num)) {
-            cornersComplete = false;
+    // የማሸነፊያ መንገዶችን እዚህ እንሰበስባለን
+    let winningPattern = null;
+
+    // --- ሀ. ረድፎችን መፈተሽ (Rows) ---
+    for (let r = 0; r < 5; r++) {
+        const isRowWin = card[r].every(num => calledSet.has(Number(num)));
+        if (isRowWin) {
+            winningPattern = { type: 'Row', index: r };
             break;
         }
     }
-    if (cornersComplete) winningPatterns.push({ type: 'corners', indices: cornerIndices });
 
-    if (winningPatterns.length > 0) {
-        console.log(`[DEBUG] Bingo found! Patterns:`, winningPatterns);
-        // Return all patterns found
+    // --- ለ. አምዶችን መፈተሽ (Columns) ---
+    if (!winningPattern) {
+        for (let c = 0; c < 5; c++) {
+            let colComplete = true;
+            for (let r = 0; r < 5; r++) {
+                if (!calledSet.has(Number(card[r][c]))) {
+                    colComplete = false;
+                    break;
+                }
+            }
+            if (colComplete) {
+                winningPattern = { type: 'Column', index: c };
+                break;
+            }
+        }
+    }
+
+    // --- ሐ. ዲያጎናሎችን መፈተሽ (Diagonals) ---
+    if (!winningPattern) {
+        // ከግራ-ላይ ወደ ቀኝ-ታች (\)
+        const diag1 = [card[0][0], card[1][1], card[2][2], card[3][3], card[4][4]];
+        if (diag1.every(num => calledSet.has(Number(num)))) {
+            winningPattern = { type: 'Diagonal', index: 1 };
+        }
+        
+        // ከቀኝ-ላይ ወደ ግራ-ታች (/)
+        const diag2 = [card[0][4], card[1][3], card[2][2], card[3][1], card[4][0]];
+        if (!winningPattern && diag2.every(num => calledSet.has(Number(num)))) {
+            winningPattern = { type: 'Diagonal', index: 2 };
+        }
+    }
+
+    // --- መ. አራቱን ማዕዘኖች መፈተሽ (4 Corners) ---
+    if (!winningPattern) {
+        const corners = [card[0][0], card[0][4], card[4][0], card[4][4]];
+        if (corners.every(num => calledSet.has(Number(num)))) {
+            winningPattern = { type: 'Corners' };
+        }
+    }
+
+    // ውጤት መመለስ
+    if (winningPattern) {
         return {
             isWin: true,
-            // patterns: winningPatterns, // Removing extra info as requested
-            // For backward compatibility, provide primary pattern info
-            type: winningPatterns[0].type,
-            indices: winningPatterns[0].indices
+            message: `Bingo! Won by ${winningPattern.type}`,
+            details: winningPattern,
+            // For backward compatibility with server.js expectations
+            type: winningPattern.type.toLowerCase(),
+            indices: [] // The new logic doesn't return indices, but we'll return an empty array to avoid crashes
         };
     }
-    
-    console.log(`[DEBUG] No Bingo found for card ${cardId}`);
-    return null;
+
+    return null; // Return null if no win, to match previous behavior
 }
 
 module.exports = { BINGO_CARDS, validateBingo };
