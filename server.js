@@ -2119,69 +2119,65 @@ wss.on('connection', (ws) => {
 
                 case 'confirm_card':
                     if (gameState.phase === 'selection' && player) {
-                        // Double check balance before confirming
+                        // Strict balance check before confirming
                         if (!player.userId) {
                             ws.send(JSON.stringify({ type: 'error', message: 'እባክዎ መጀመሪያ ይግቡ (Please login)' }));
                             break;
                         }
 
-                        db.query('SELECT balance, winning_balance FROM wallets WHERE user_id = $1', [player.userId])
-                            .then(async res => {
-                                const row = res.rows[0];
-                                const balance = row ? (parseFloat(row.balance || 0) + parseFloat(row.winning_balance || 0)) : 0;
-                                const stakeAmount = 10; // Fixed for now
+                        // Use a transaction-safe balance check via Wallet model
+                        try {
+                            const balanceData = await Wallet.getBalance(player.userId);
+                            const totalBalance = balanceData.total;
+                            const stakeAmount = gameState.stakeAmount || 10;
 
-                                if (balance < stakeAmount) {
-                                    ws.send(JSON.stringify({
-                                        type: 'error',
-                                        message: 'ካርድ ለማረጋገጥ በቂ ባላንስ የለም።'
-                                    }));
+                            if (totalBalance < stakeAmount) {
+                                ws.send(JSON.stringify({
+                                    type: 'error',
+                                    message: `❌ በቂ ባላንስ የለዎትም። ለመጫወት ቢያንስ ${stakeAmount} ETB ያስፈልጋል።`
+                                }));
+                                return;
+                            }
+
+                            const cardIdToConfirm = data.cardId || player.selectedCardId;
+                            if (cardIdToConfirm) {
+                                // Check if card is already taken by someone else
+                                const isTaken = Array.from(gameState.players.values())
+                                    .some(p => p.isCardConfirmed && p.selectedCardId === cardIdToConfirm && p.userId !== player.userId);
+                                
+                                if (isTaken) {
+                                    ws.send(JSON.stringify({ type: 'error', message: 'ይህ ካርድ ተይዟል! እባክዎ ሌላ ይምረጡ።' }));
                                     return;
                                 }
 
-                                const cardIdToConfirm = data.cardId || player.selectedCardId;
-                                if (cardIdToConfirm) {
-                                    // Check if already taken
-                                    const isTaken = Array.from(gameState.players.values())
-                                        .some(p => p.isCardConfirmed && p.selectedCardId === cardIdToConfirm);
-                                    
-                                    if (isTaken) {
-                                        ws.send(JSON.stringify({ type: 'error', message: 'ይህ ካርድ ተይዟል!' }));
-                                        return;
-                                    }
-
-                                    // Deduct stake
-                                    const deductionResult = await Wallet.deductBalance(player.userId, stakeAmount, `Stake for game #${currentGameId}`);
-                                    if (!deductionResult || (deductionResult.success === false)) {
-                                        player.isCardConfirmed = false;
-                                        player.selectedCardId = null;
-                                        ws.send(JSON.stringify({ type: 'error', message: 'የሒሳብ ቅነሳ አልተሳካም። በቂ ባላንስ እንዳለዎት ያረጋግጡ።' }));
-                                        return;
-                                    }
-
-                                    player.isCardConfirmed = true;
-                                    player.selectedCardId = cardIdToConfirm;
-                                    player.balance = balance - stakeAmount;
-
-                                    try {
-                                        await Game.addParticipant(currentGameId, player.userId, cardIdToConfirm, stakeAmount);
-                                    } catch (err) {
-                                        console.error('Error adding participant:', err);
-                                    }
-
-                                    ws.send(JSON.stringify({
-                                        type: 'card_confirmed',
-                                        cardId: cardIdToConfirm,
-                                        balance: player.balance
-                                    }));
-
-                                    broadcast({
-                                        type: 'card_taken',
-                                        cardId: cardIdToConfirm
-                                    });
+                                // Atomic deduction of stake
+                                const deductionResult = await Wallet.deductBalance(player.userId, stakeAmount, `Stake for game #${currentGameId}`, currentGameId);
+                                if (!deductionResult || !deductionResult.success) {
+                                    ws.send(JSON.stringify({ type: 'error', message: 'የሒሳብ ቅነሳ አልተሳካም። በቂ ባላንስ እንዳለዎት ያረጋግጡ።' }));
+                                    return;
                                 }
-                            })
-                            .catch(err => console.error('Error checking balance during confirmation:', err));
+
+                                player.isCardConfirmed = true;
+                                player.selectedCardId = cardIdToConfirm;
+                                player.balance = deductionResult.balance;
+
+                                await Game.addParticipant(currentGameId, player.userId, cardIdToConfirm, stakeAmount);
+
+                                ws.send(JSON.stringify({
+                                    type: 'card_confirmed',
+                                    cardId: cardIdToConfirm,
+                                    balance: player.balance
+                                }));
+
+                                broadcast({
+                                    type: 'card_taken',
+                                    cardId: cardIdToConfirm
+                                });
+                            }
+                        } catch (err) {
+                            console.error('Error during card confirmation:', err);
+                            ws.send(JSON.stringify({ type: 'error', message: 'የቴክኒክ ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።' }));
+                        }
                     }
                     break;
                     
