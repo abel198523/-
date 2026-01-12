@@ -2160,9 +2160,12 @@ wss.on('connection', (ws) => {
                         if (player.isCardConfirmed && player.selectedCardId) {
                             // Re-calculate confirmed players to ensure stake is accurate
                             const confirmedPlayersCount = getConfirmedPlayersCount();
-                            const winPattern = validateBingo(player.selectedCardId, gameState.calledNumbers);
                             
-                            console.log(`Bingo claim from ${player.username} (Card: ${player.selectedCardId}). Pattern found:`, winPattern);
+                            // Debug logs before validation
+                            console.log(`[DEBUG] Bingo check - Player: ${player.username}, Card: ${player.selectedCardId}`);
+                            console.log(`[DEBUG] Called Numbers (${gameState.calledNumbers.length}):`, gameState.calledNumbers);
+                            
+                            const winPattern = validateBingo(player.selectedCardId, gameState.calledNumbers);
                             
                             if (winPattern) {
                                 winPattern.isWin = true;

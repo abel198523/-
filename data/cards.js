@@ -106,11 +106,17 @@ function validateBingo(cardId, calledNumbers) {
     if (!cardData) return null;
     
     // Convert to a Set of numbers for fast lookup and strict typing
-    const calledSet = new Set(calledNumbers.map(n => Number(n)));
+    // Ensure all elements are numbers and filter out null/undefined
+    const calledSet = new Set();
+    if (Array.isArray(calledNumbers)) {
+        calledNumbers.forEach(n => {
+            if (n !== null && n !== undefined) calledSet.add(Number(n));
+        });
+    }
     calledSet.add(0); // FREE space is always considered called
     
     console.log(`[DEBUG] Validating Bingo for card ${cardId}`);
-    console.log(`[DEBUG] Called numbers:`, Array.from(calledSet));
+    console.log(`[DEBUG] Called numbers in Set:`, Array.from(calledSet));
 
     let winningPatterns = [];
 
