@@ -1297,7 +1297,7 @@ function showBingoError(message) {
 }
 
 function showWinnerDisplay(winner) {
-    const isMe = winner.userId === currentUserId; // Changed from telegramId to userId comparison
+    const isMe = winner.userId === currentUserId;
     
     let overlay = document.getElementById('bingo-modal-overlay');
     if (!overlay) {
@@ -1324,49 +1324,75 @@ function showWinnerDisplay(winner) {
     const icon = isMe ? '🏆' : '🎉';
     const title = isMe ? 'እንኳን ደስ አለዎት!' : 'አሸናፊ ተገኝቷል!';
     const actionColor = isMe ? '#00d984' : '#a855f7';
+    
+    const patternName = getPatternName(winner.pattern ? winner.pattern.type : 'bingo');
 
     overlay.innerHTML = `
         <div style="
             background: #1c2235;
             width: 85%;
-            max-width: 320px;
+            max-width: 340px;
             padding: 20px;
             border-radius: 24px;
             border: 2px solid ${borderColor};
             text-align: center;
             box-shadow: 0 0 40px ${borderColor}33;
             animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-height: 95vh;
+            overflow-y: auto;
         ">
             <div style="
-                width: 60px;
-                height: 60px;
+                width: 50px;
+                height: 50px;
                 background: ${borderColor}1a;
                 border-radius: 50%;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin: 0 auto 15px;
+                margin: 0 auto 10px;
             ">
-                <span style="font-size: 30px;">${icon}</span>
+                <span style="font-size: 25px;">${icon}</span>
             </div>
-            <h2 style="color: #fff; margin-bottom: 5px; font-size: 1.4em;">${title}</h2>
-            <div style="color: #8890a6; line-height: 1.4; margin-bottom: 20px;">
-                <p style="font-size: 1.1em; color: #fff; font-weight: 800; margin-bottom: 5px;">${winner.username || '---'}</p>
-                <p style="font-size: 0.9em; color: #00f2ff; margin-bottom: 5px;">Telegram ID: ${winner.telegramId || '---'}</p>
-                <p style="font-size: 1em; color: #fff;">ካርድ: #${winner.cardId}</p>
-                <p style="color: #ffd700; font-size: 1.2em; font-weight: 800; margin-top: 10px;">ሽልማት: ${winner.prize || 0} ብር</p>
+            <h2 style="color: #fff; margin-bottom: 5px; font-size: 1.3em;">${title}</h2>
+            
+            <div style="background: rgba(255,215,0,0.1); border-radius: 12px; padding: 10px; margin-bottom: 15px; border: 1px dashed #ffd700;">
+                <p style="color: #ffd700; font-weight: 800; font-size: 1.1em; margin-bottom: 5px;">🏆 ${patternName}</p>
+                <p style="color: #fff; font-size: 0.85em;">በ${patternName} አሸንፈዋል!</p>
             </div>
-            <div id="return-countdown" class="return-timer">ወደ ካርድ መምረጫ ለመመለስ 5 ሰከንድ ቀርቷል...</div>
+
+            <div style="margin-bottom: 10px;">
+                <p style="font-size: 1.1em; color: #fff; font-weight: 800; margin-bottom: 2px;">${winner.username || '---'}</p>
+                <p style="font-size: 0.8em; color: #00f2ff;">ID: ${winner.telegramId || '---'}</p>
+            </div>
+
+            <!-- Mini Card Preview -->
+            <div style="margin: 10px auto; width: 180px;">
+                <p style="color: #8890a6; font-size: 0.75em; margin-bottom: 5px;">ያሸነፈበት ካርድ (#${winner.cardId})</p>
+                <div id="winner-card-display" style="
+                    display: grid;
+                    grid-template-columns: repeat(5, 1fr);
+                    gap: 3px;
+                    background: rgba(0,0,0,0.2);
+                    padding: 5px;
+                    border-radius: 8px;
+                "></div>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <p style="color: #ffd700; font-size: 1.2em; font-weight: 800;">ሽልማት: ${winner.prize || 0} ብር</p>
+            </div>
+
+            <div id="return-countdown" style="color: #8890a6; font-size: 0.85em; margin-bottom: 15px;">ወደ ካርድ መምረጫ ለመመለስ 5 ሰከንድ ቀርቷል...</div>
         </div>
     `;
 
     overlay.style.display = 'flex';
     
-    // Highlight winning pattern on the small card display
+    // Highlight the winning pattern on the mini card
     if (winner.pattern) {
         highlightWinningPattern(winner.cardId, winner.pattern);
     }
-
+    
     // Start 5 second countdown
     let timeLeft = 5;
     const countdownEl = document.getElementById('return-countdown');
@@ -1391,19 +1417,17 @@ function showWinnerDisplay(winner) {
     }, 1000);
 
     if (isMe && typeof confetti === 'function') {
-        // ... (confetti code remains same)
-
         const duration = 5 * 1000;
         const animationEnd = Date.now() + duration;
         const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 30000 };
 
         const randomInRange = (min, max) => Math.random() * (max - min) + min;
 
-        const interval = setInterval(function() {
-            const timeLeft = animationEnd - Date.now();
-            if (timeLeft <= 0) return clearInterval(interval);
+        const confettiInterval = setInterval(function() {
+            const timeRemaining = animationEnd - Date.now();
+            if (timeRemaining <= 0) return clearInterval(confettiInterval);
 
-            const particleCount = 50 * (timeLeft / duration);
+            const particleCount = 50 * (timeRemaining / duration);
             confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
             confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
         }, 250);
