@@ -2177,20 +2177,18 @@ wss.on('connection', (ws) => {
                                     startWinnerDisplay({
                                         userId: player.userId,
                                         username: player.username,
-                                        phoneNumber: player.phone_number || player.phoneNumber || '---',
+                                        telegramId: player.telegram_id || player.telegramId || '---',
                                         cardId: player.selectedCardId,
-                                        prize: prizeAmount,
-                                        pattern: winPattern
+                                        prize: prizeAmount
                                     });
                                 }).catch(err => {
                                     console.error('Error crediting win prize:', err);
                                     startWinnerDisplay({
                                         userId: player.userId,
                                         username: player.username,
-                                        phoneNumber: player.phone_number || player.phoneNumber || '---',
+                                        telegramId: player.telegram_id || player.telegramId || '---',
                                         cardId: player.selectedCardId,
-                                        prize: prizeAmount,
-                                        pattern: winPattern
+                                        prize: prizeAmount
                                     });
                                 });
                             } else {
