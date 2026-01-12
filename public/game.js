@@ -853,7 +853,7 @@ function updateGameStats(data) {
         if (gameStake) gameStake.textContent = `${parseFloat(data.stake).toFixed(2)}Br`;
     }
     
-    // Always show the banner as requested, even with 0 values
+    // Always show the banner
     const banner = document.getElementById('active-game-banner');
     if (banner) {
         banner.style.display = 'block';
@@ -1322,7 +1322,7 @@ function showWinnerDisplay(winner) {
             </div>
             <h2 style="color: #fff; margin-bottom: 5px; font-size: 1.4em;">${title}</h2>
             <div style="color: #8890a6; line-height: 1.4; margin-bottom: 20px;">
-                <p style="font-size: 1.1em; color: #fff; font-weight: 800; margin-bottom: 5px;">${winner.username}</p>
+                <p style="font-size: 1.1em; color: #fff; font-weight: 800; margin-bottom: 5px;">${winner.username || '---'}</p>
                 <p style="font-size: 0.9em; color: #00f2ff; margin-bottom: 5px;">Telegram ID: ${winner.telegramId || '---'}</p>
                 <p style="font-size: 1em; color: #fff;">ካርድ: #${winner.cardId}</p>
                 <p style="color: #ffd700; font-size: 1.2em; font-weight: 800; margin-top: 10px;">ሽልማት: ${winner.prize || 0} ብር</p>
