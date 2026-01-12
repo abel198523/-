@@ -346,12 +346,7 @@ function initializeLandingScreen() {
                     
                     console.log(`Balance check: Total=${totalBalance}, Required=${requiredStake}`);
 
-                    // Allow access if total balance is greater than or equal to the required stake
-                    if (totalBalance < requiredStake) {
-                        showNoBalanceModal(totalBalance, requiredStake);
-                        return;
-                    }
-                    
+                    // Restrictions removed as requested
                     if (landingScreen) landingScreen.style.display = 'none';
                     if (selectionScreen) selectionScreen.style.display = 'flex';
                     
