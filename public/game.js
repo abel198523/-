@@ -610,8 +610,8 @@ function renderPlayerCard(cardId) {
                 cell.textContent = '★';
             } else {
                 cell.textContent = num;
-                // Restore mark if it was already marked manually
-                if (markedNumbers.has(num)) {
+                // Restore mark if it was already marked manually OR auto-marked
+                if (markedNumbers.has(num) || calledNumbersSet.has(num)) {
                     cell.classList.add('marked');
                 }
             }
@@ -629,6 +629,22 @@ function renderPlayerCard(cardId) {
             
             cardContainer.appendChild(cell);
         });
+    });
+}
+
+function autoMarkPlayerCard(number) {
+    const cells = document.querySelectorAll('.player-card-cell');
+    cells.forEach(cell => {
+        const cellNum = parseInt(cell.dataset.number);
+        if (cellNum === number) {
+            if (!cell.classList.contains('marked')) {
+                cell.classList.add('marked');
+                // Optional: Add animation effect
+                cell.style.animation = 'none';
+                cell.offsetHeight; // trigger reflow
+                cell.style.animation = 'markPop 0.3s ease-out';
+            }
+        }
     });
 }
 
@@ -993,6 +1009,10 @@ function handleWebSocketMessage(data) {
             displayCalledNumber(data.letter, data.number);
             // markCalledNumber(data.number); // Auto-marking disabled
             markMasterNumber(data.number);
+            calledNumbersSet.add(data.number); // Add to local set
+            
+            // Auto-mark the number on the player's card
+            autoMarkPlayerCard(data.number);
             
             // Update called count
             if (data.calledNumbers) {
