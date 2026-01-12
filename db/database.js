@@ -102,7 +102,6 @@ async function initializeDatabase() {
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
                 balance DECIMAL(10, 2) DEFAULT 0.00,
-                winning_balance DECIMAL(10, 2) DEFAULT 0.00,
                 currency VARCHAR(10) DEFAULT 'ETB',
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(user_id)

@@ -275,7 +275,7 @@ async function loadProfile() {
             
             const balanceEl = document.getElementById('profile-balance');
             if (balanceEl) {
-                const total = (parseFloat(profile.balance) || 0) + (parseFloat(profile.winning_balance) || 0);
+                const total = parseFloat(profile.balance) || 0;
                 balanceEl.textContent = `${total.toFixed(2)} ETB`;
             }
             
