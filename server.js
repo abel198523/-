@@ -746,8 +746,8 @@ bot.on('message', async (msg) => {
         } else if (state.step === 'confirmation_code') {
             const rawText = text.trim();
             
-            // ✅ 100% PERFECT PARSING: Extract Transaction ID and Amount from various Amharic SMS formats
-            const txIdPattern = /(?:ቁጥርዎ|receipt\/|ቁጥርዎ\s*)\s*([A-Z0-9]{8,15})/i;
+            // ✅ IMPROVED PARSING: Handle long texts and extract Transaction ID and Amount
+            const txIdPattern = /(?:ቁጥርዎ|receipt\/|ቁጥርዎ\s*|Transaction ID:|Ref:)\s*([A-Z0-9]{8,25})/i;
             const amountPattern = /([\d,.]+)\s*ብር/;
             
             const txIdMatch = rawText.match(txIdPattern);
@@ -758,14 +758,18 @@ bot.on('message', async (msg) => {
             
             if (txIdMatch) {
                 finalCode = txIdMatch[1].trim().toUpperCase();
-                console.log(`Extracted Transaction ID from user input: ${finalCode}`);
-            } else if (/^[A-Z0-9]{8,15}$/i.test(rawText)) {
-                // If it's just a plain code
+                console.log(`Extracted Transaction ID: ${finalCode}`);
+            } else if (/^[A-Z0-9]{8,25}$/i.test(rawText)) {
                 finalCode = rawText.toUpperCase();
-            } else if (rawText.length > 20) {
-                // If the text is long and doesn't match the specific patterns, 
-                // we treat the first 15 chars as a potential code or just use a snippet
-                finalCode = rawText.substring(0, 50); // Keep more for admin to see
+            } else if (rawText.length > 50) {
+                // If it's a very long text (like a full SMS), we take a snippet or use the whole thing
+                // The DB column is now TEXT, so it can handle it, but we'll try to find any alphanumeric string
+                const generalCodeMatch = rawText.match(/[A-Z0-9]{8,20}/i);
+                if (generalCodeMatch) {
+                    finalCode = generalCodeMatch[0].toUpperCase();
+                } else {
+                    finalCode = rawText.substring(0, 100); 
+                }
             }
             
             if (amountMatch) {
