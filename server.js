@@ -2098,10 +2098,10 @@ wss.on('connection', (ws) => {
                             break;
                         }
                         
-                        db.query('SELECT balance, winning_balance FROM wallets WHERE user_id = $1', [player.userId])
+                        db.query('SELECT balance FROM wallets WHERE user_id = $1', [player.userId])
                             .then(res => {
                                 const row = res.rows[0];
-                                const balance = row ? (parseFloat(row.balance || 0) + parseFloat(row.winning_balance || 0)) : 0;
+                                const balance = row ? parseFloat(row.balance || 0) : 0;
                                 if (balance < (gameState.stakeAmount || 10)) {
                                     player.selectedCardId = null; // Clear local card selection
                                     ws.send(JSON.stringify({
@@ -2416,7 +2416,7 @@ app.get('/api/profile/:telegramId', async (req, res) => {
         
         const userResult = await db.query(
             `SELECT u.id, u.username, u.telegram_id, u.phone_number, u.is_registered, u.created_at, 
-                    w.balance, w.winning_balance 
+                    w.balance 
              FROM users u 
              LEFT JOIN wallets w ON u.id = w.user_id 
              WHERE u.telegram_id = $1`,
@@ -2428,9 +2428,7 @@ app.get('/api/profile/:telegramId', async (req, res) => {
         }
 
         const user = userResult.rows[0];
-        const mainBalance = parseFloat(user.balance) || 0;
-        const winningBalance = parseFloat(user.winning_balance) || 0;
-        const totalBalance = mainBalance + winningBalance;
+        const totalBalance = parseFloat(user.balance) || 0;
         
         const gamesResult = await db.query(
             `SELECT COUNT(*) as total_games FROM game_participants WHERE user_id = $1`,
@@ -2448,8 +2446,7 @@ app.get('/api/profile/:telegramId', async (req, res) => {
                 username: user.username || 'Player',
                 telegramId: user.telegram_id,
                 phoneNumber: user.phone_number || '---',
-                balance: mainBalance,
-                winningBalance: winningBalance,
+                balance: totalBalance,
                 totalBalance: totalBalance,
                 totalGames: parseInt(gamesResult.rows[0].total_games) || 0,
                 wins: parseInt(winsResult.rows[0].wins) || 0,
@@ -2538,7 +2535,7 @@ app.get('/api/wallet-info/:userId', async (req, res) => {
         const telegramId = parseInt(userId) || 0;
         
         const result = await db.query(
-            `SELECT u.id, u.is_registered, w.balance, w.winning_balance 
+            `SELECT u.id, u.is_registered, w.balance 
              FROM users u 
              LEFT JOIN wallets w ON u.id = w.user_id 
              WHERE u.telegram_id = $1`,
@@ -2548,7 +2545,6 @@ app.get('/api/wallet-info/:userId', async (req, res) => {
         if (result.rows.length === 0) {
             return res.json({ 
                 balance: 0, 
-                winning_balance: 0,
                 total_balance: 0,
                 is_registered: false,
                 stake: 10
@@ -2556,19 +2552,17 @@ app.get('/api/wallet-info/:userId', async (req, res) => {
         }
 
         const user = result.rows[0];
-        const mainBalance = parseFloat(user.balance) || 0;
-        const winningBalance = parseFloat(user.winning_balance) || 0;
+        const balance = parseFloat(user.balance) || 0;
         
         res.json({ 
-            balance: mainBalance, 
-            winning_balance: winningBalance,
-            total_balance: mainBalance + winningBalance,
+            balance: balance, 
+            total_balance: balance,
             is_registered: user.is_registered || false,
             stake: 10
         });
     } catch (err) {
         console.error('Wallet info error:', err);
-        res.status(500).json({ balance: 0, winning_balance: 0, total_balance: 0, is_registered: false, stake: 10 });
+        res.status(500).json({ balance: 0, total_balance: 0, is_registered: false, stake: 10 });
     }
 });
 
@@ -2583,7 +2577,7 @@ app.post('/api/bet', async (req, res) => {
         const telegramId = parseInt(userId) || 0;
 
         const userResult = await db.query(
-            'SELECT u.id, w.balance, w.winning_balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
+            'SELECT u.id, w.balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
             [telegramId]
         );
 
@@ -2592,34 +2586,20 @@ app.post('/api/bet', async (req, res) => {
         }
 
         const internalUserId = userResult.rows[0].id;
-        const mainBalance = parseFloat(userResult.rows[0].balance) || 0;
-        const winningBalance = parseFloat(userResult.rows[0].winning_balance) || 0;
-        const totalBalance = mainBalance + winningBalance;
+        const balance = parseFloat(userResult.rows[0].balance) || 0;
         
-        if (totalBalance < stakeAmount) {
+        if (balance < stakeAmount) {
             return res.json({ success: false, message: 'Insufficient balance' });
         }
 
-        // Deduct from main balance first, then winning balance
-        let amountToDeduct = stakeAmount;
-        let newMainBalance = mainBalance;
-        let newWinningBalance = winningBalance;
-
-        if (newMainBalance >= amountToDeduct) {
-            newMainBalance -= amountToDeduct;
-            amountToDeduct = 0;
-        } else {
-            amountToDeduct -= newMainBalance;
-            newMainBalance = 0;
-            newWinningBalance -= amountToDeduct;
-        }
+        const newBalance = balance - stakeAmount;
         
         await db.query(
-            'UPDATE wallets SET balance = $1, winning_balance = $2 WHERE user_id = $3',
-            [newMainBalance, newWinningBalance, internalUserId]
+            'UPDATE wallets SET balance = $1 WHERE user_id = $2',
+            [newBalance, internalUserId]
         );
 
-        res.json({ success: true, balance: newMainBalance + newWinningBalance });
+        res.json({ success: true, balance: newBalance });
     } catch (err) {
         console.error('Bet error:', err);
         res.status(500).json({ success: false, message: 'Bet failed' });
