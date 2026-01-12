@@ -2202,7 +2202,8 @@ wss.on('connection', (ws) => {
                                 
                                 console.log(`Bingo Validated! User ${player.userId} won ${prizeAmount} ETB (Pot: ${totalPot})`);
                                 
-                                Wallet.win(player.userId, prizeAmount, gameState.id).then(() => {
+                                // TEMPORARY DISABLE: Game reward disabled for testing as requested by user
+                                // Wallet.win(player.userId, prizeAmount, gameState.id).then(() => {
                                     startWinnerDisplay({
                                         userId: player.userId,
                                         username: player.username,
@@ -2210,16 +2211,9 @@ wss.on('connection', (ws) => {
                                         cardId: player.selectedCardId,
                                         prize: prizeAmount
                                     });
-                                }).catch(err => {
-                                    console.error('Error crediting win prize:', err);
-                                    startWinnerDisplay({
-                                        userId: player.userId,
-                                        username: player.username,
-                                        telegramId: player.telegram_id || player.telegramId || '---',
-                                        cardId: player.selectedCardId,
-                                        prize: prizeAmount
-                                    });
-                                });
+                                // }).catch(err => {
+                                //     console.error('Error crediting win prize:', err);
+                                // });
                             } else {
                                 console.log(`Bingo Rejected for ${player.username}. Numbers called: ${gameState.calledNumbers.length}`);
                                 ws.send(JSON.stringify({

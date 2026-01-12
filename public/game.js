@@ -411,6 +411,14 @@ function generateCardSelection() {
         timerContainer.style.cssText = 'text-align: center; margin-bottom: 15px; font-weight: bold; font-size: 1.2em; color: #ffcc00;';
         grid.parentNode.insertBefore(timerContainer, grid);
     }
+
+    // Add stake/pot info display
+    let stakeDisplay = document.getElementById('stake-info-display');
+    if (!stakeDisplay) {
+        stakeDisplay = document.createElement('div');
+        stakeDisplay.id = 'stake-info-display';
+        grid.parentNode.insertBefore(stakeDisplay, grid);
+    }
     
     grid.innerHTML = '';
     
