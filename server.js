@@ -1789,7 +1789,7 @@ if (!global.selectionInterval) {
 
             if (gameState.timeLeft <= 0) {
                 const confirmedCount = getConfirmedPlayersCount();
-                if (confirmedCount >= 2) { 
+                if (confirmedCount >= 1) { 
                     console.log('Selection phase ended. Starting game with ' + confirmedCount + ' players.');
                     startGamePhase();
                     startNumberCalling();
@@ -1859,7 +1859,7 @@ async function gameLoop() {
         
         if (gameState.timeLeft <= 0) {
             const confirmedCount = getConfirmedPlayersCount();
-            if (confirmedCount >= 2) { 
+            if (confirmedCount >= 1) { 
                 console.log('--- Starting game phase with', confirmedCount, 'players ---');
                 startGamePhase();
                 
