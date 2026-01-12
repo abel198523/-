@@ -208,9 +208,9 @@ html, body {
     border: 1px solid rgba(0, 200, 255, 0.3);
     border-radius: 12px;
     margin: 10px 15px;
-    padding: 10px 15px;
+    padding: 8px 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    min-height: 50px;
+    min-height: 40px;
     flex-shrink: 0;
 }
 
@@ -218,12 +218,14 @@ html, body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    width: 100%;
 }
 
 .banner-status {
     display: flex;
     align-items: center;
     gap: 8px;
+    white-space: nowrap;
 }
 
 .status-dot {

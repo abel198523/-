@@ -842,14 +842,10 @@ function updateGameStats(data) {
         if (gameStake) gameStake.textContent = `${parseFloat(data.stake).toFixed(2)}Br`;
     }
     
-    // Update banner visibility based on phase and player count
+    // Always show the banner as requested, even with 0 values
     const banner = document.getElementById('active-game-banner');
     if (banner) {
-        if (data.phase === 'game' || (data.participantsCount > 0)) {
-            banner.style.display = 'block';
-        } else {
-            banner.style.display = 'none';
-        }
+        banner.style.display = 'block';
     }
 }
 
