@@ -3700,4 +3700,80 @@ const BINGO_CARDS = {
     ]
   ]
 };
-module.exports = { BINGO_CARDS, validateBingo: (cardId, calledNumbers) => { const card = BINGO_CARDS[cardId]; if (!card) return null; const calledSet = new Set(calledNumbers.map(n => Number(n))); calledSet.add(0); let winningPattern = null; for (let r = 0; r < 5; r++) { if (card[r].every(num => calledSet.has(Number(num)))) { winningPattern = { type: 'row', index: r }; break; } } if (!winningPattern) { for (let c = 0; c < 5; c++) { let colComplete = true; for (let r = 0; r < 5; r++) { if (!calledSet.has(Number(card[r][c]))) { colComplete = false; break; } } if (colComplete) { winningPattern = { type: 'column', index: c }; break; } } } if (!winningPattern) { const diag1 = [card[0][0], card[1][1], card[2][2], card[3][3], card[4][4]]; if (diag1.every(num => calledSet.has(Number(num)))) winningPattern = { type: 'diagonal', index: 1 }; const diag2 = [card[0][4], card[1][3], card[2][2], card[3][1], card[4][0]]; if (!winningPattern && diag2.every(num => calledSet.has(Number(num)))) winningPattern = { type: 'diagonal', index: 2 }; } if (!winningPattern) { const corners = [card[0][0], card[0][4], card[4][0], card[4][4]]; if (corners.every(num => calledSet.has(Number(num)))) winningPattern = { type: 'corners' }; } if (winningPattern) return { isWin: true, message: 'Bingo!', type: winningPattern.type, details: winningPattern, indices: [] }; return null; } };
+module.exports = { 
+    BINGO_CARDS, 
+    validateBingo: (cardId, calledNumbers) => { 
+        const card = BINGO_CARDS[cardId]; 
+        if (!card) return null; 
+        
+        const calledSet = new Set(calledNumbers.map(n => Number(n))); 
+        calledSet.add(0); // Free space
+        
+        let winningPattern = null; 
+        let winningIndices = [];
+
+        // Check rows
+        for (let r = 0; r < 5; r++) { 
+            if (card[r].every(num => calledSet.has(Number(num)))) { 
+                winningPattern = { type: 'row', index: r }; 
+                winningIndices = [0, 1, 2, 3, 4].map(c => r * 5 + c);
+                break; 
+            } 
+        } 
+
+        // Check columns
+        if (!winningPattern) { 
+            for (let c = 0; c < 5; c++) { 
+                let colComplete = true; 
+                for (let r = 0; r < 5; r++) { 
+                    if (!calledSet.has(Number(card[r][c]))) { 
+                        colComplete = false; 
+                        break; 
+                    } 
+                } 
+                if (colComplete) { 
+                    winningPattern = { type: 'column', index: c }; 
+                    winningIndices = [0, 1, 2, 3, 4].map(r => r * 5 + c);
+                    break; 
+                } 
+            } 
+        } 
+
+        // Check diagonals
+        if (!winningPattern) { 
+            const diag1 = [card[0][0], card[1][1], card[2][2], card[3][3], card[4][4]]; 
+            if (diag1.every(num => calledSet.has(Number(num)))) {
+                winningPattern = { type: 'diagonal', index: 1 }; 
+                winningIndices = [0, 6, 12, 18, 24];
+            }
+            
+            if (!winningPattern) {
+                const diag2 = [card[0][4], card[1][3], card[2][2], card[3][1], card[4][0]]; 
+                if (diag2.every(num => calledSet.has(Number(num)))) {
+                    winningPattern = { type: 'diagonal', index: 2 }; 
+                    winningIndices = [4, 8, 12, 16, 20];
+                }
+            }
+        } 
+
+        // Check corners
+        if (!winningPattern) { 
+            const corners = [card[0][0], card[0][4], card[4][0], card[4][4]]; 
+            if (corners.every(num => calledSet.has(Number(num)))) {
+                winningPattern = { type: 'corners' }; 
+                winningIndices = [0, 4, 20, 24];
+            }
+        } 
+
+        if (winningPattern) {
+            return { 
+                isWin: true, 
+                message: 'Bingo!', 
+                type: winningPattern.type, 
+                details: winningPattern, 
+                indices: winningIndices 
+            }; 
+        }
+        return null; 
+    } 
+};
