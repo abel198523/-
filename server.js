@@ -319,16 +319,30 @@ const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 
 // Helper function to get main keyboard
 function getMainKeyboard(telegramId) {
-    // Force use the current server's URL for testing in Replit
-    const currentDomain = process.env.REPLIT_DOMAINS ? process.env.REPLIT_DOMAINS.split(',')[0] : (process.env.RENDER_EXTERNAL_URL || MINI_APP_URL || '');
-    const currentUrl = currentDomain.startsWith('http') ? currentDomain : `https://${currentDomain}`;
+    // Determine the base URL based on environment
+    let currentUrl = MINI_APP_URL || '';
+    
+    // Fallback logic if MINI_APP_URL isn't set
+    if (!currentUrl) {
+        if (process.env.REPLIT_DOMAINS) {
+            currentUrl = `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
+        } else if (process.env.RENDER_EXTERNAL_URL) {
+            currentUrl = process.env.RENDER_EXTERNAL_URL;
+        }
+    }
+
+    // Ensure it doesn't have a trailing slash
+    if (currentUrl.endsWith('/')) {
+        currentUrl = currentUrl.slice(0, -1);
+    }
+    
     const miniAppUrlWithId = `${currentUrl}${currentUrl.includes('?') ? '&' : '?'}tg_id=${telegramId}`;
     
     console.log(`[DEBUG] Generating keyboard with URL: ${miniAppUrlWithId}`);
     
     return {
         keyboard: [
-            [{ text: "▶️ Play (Replit)", web_app: { url: String(miniAppUrlWithId) } }],
+            [{ text: "▶️ Play", web_app: { url: String(miniAppUrlWithId) } }],
             [{ text: "💰 Check Balance" }, { text: "🔗 Referral Link" }],
             [{ text: "💳 Deposit" }, { text: "💸 Withdraw" }]
         ],
