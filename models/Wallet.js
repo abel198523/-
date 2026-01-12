@@ -158,7 +158,9 @@ class Wallet {
             );
             
             const winningBalanceBefore = parseFloat(balanceResult.rows[0]?.winning_balance || 0);
-            const winningBalanceAfter = winningBalanceBefore + parseFloat(amount);
+            
+            // TEMPORARY DISABLE: Game reward disabled for testing as requested by user
+            const winningBalanceAfter = winningBalanceBefore; // + parseFloat(amount);
             
             await client.query(
                 `UPDATE wallets SET winning_balance = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2`,
