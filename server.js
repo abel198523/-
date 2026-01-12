@@ -123,8 +123,17 @@ const bot = new TelegramBot(TELEGRAM_BOT_TOKEN, {
     }
 });
 
+// Explicitly handle polling errors and conflict
+bot.on('polling_error', (error) => {
+    if (error.code === 'ETELEGRAM' && error.message.includes('409 Conflict')) {
+        console.warn("Polling conflict detected. The bot might be running elsewhere (e.g., on Render). In dev/Replit environment, this is expected if both are active.");
+    } else {
+        console.error("Polling error:", error.code, error.message);
+    }
+});
+
 // Explicitly delete webhook to ensure polling works
-bot.deleteWebHook().then(() => {
+bot.deleteWebHook({ drop_pending_updates: true }).then(() => {
     console.log("Webhook deleted, starting polling...");
 }).catch((err) => {
     console.warn("Failed to delete webhook:", err.message);
