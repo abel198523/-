@@ -1622,9 +1622,34 @@ function markCalledNumber(number) {
 function initializeBingoButton() {
     const bingoBtn = document.getElementById('bingo-btn');
     if (bingoBtn) {
-        bingoBtn.addEventListener('click', function() {
-            claimBingo();
-        });
+        console.log('Initializing Bingo button');
+        
+        // Use a flag to prevent multiple rapid clicks
+        let isProcessing = false;
+
+        const handleBingo = async (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            if (isProcessing) return;
+            isProcessing = true;
+            
+            console.log('Bingo button activated');
+            try {
+                await claimBingo();
+            } finally {
+                // Re-enable after a short delay
+                setTimeout(() => { isProcessing = false; }, 2000);
+            }
+        };
+
+        // Standard click
+        bingoBtn.addEventListener('click', handleBingo);
+        
+        // Touch events for mobile to ensure responsiveness
+        bingoBtn.addEventListener('touchstart', handleBingo, {passive: false});
     }
 }
 

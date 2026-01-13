@@ -2208,45 +2208,47 @@ wss.on('connection', (ws) => {
                     
                 case 'claim_bingo':
                     if (gameState.phase === 'game' && player) {
-                        if (player.isCardConfirmed && player.selectedCardId) {
+                        const cardIdToValidate = data.cardId || player.selectedCardId;
+                        console.log(`[DEBUG] claim_bingo received for card: ${cardIdToValidate}, player: ${player.username}`);
+                        
+                        if (cardIdToValidate) {
                             // Re-calculate confirmed players to ensure stake is accurate
                             const confirmedPlayersCount = getConfirmedPlayersCount();
                             
                             // Debug logs before validation
-                            console.log(`[DEBUG] Bingo check - Player: ${player.username}, Card: ${player.selectedCardId}`);
+                            console.log(`[DEBUG] Bingo check - Player: ${player.username}, Card: ${cardIdToValidate}`);
                             console.log(`[DEBUG] Called Numbers (${gameState.calledNumbers.length}):`, gameState.calledNumbers);
                             
-                            const winPattern = validateBingo(player.selectedCardId, gameState.calledNumbers);
+                            const winPattern = validateBingo(cardIdToValidate, gameState.calledNumbers);
                             
                             if (winPattern) {
+                                console.log(`[DEBUG] Bingo SUCCESS for ${player.username}`);
                                 winPattern.isWin = true;
                                 
                                 // Calculate prize (80% of pot, 20% fee)
                                 const totalPot = confirmedPlayersCount * (gameState.stakeAmount || 10);
                                 const prizeAmount = Math.floor(totalPot * 0.8);
                                 
-                                // STRICT LIMIT: Ensure prize never exceeds the calculated 80% of the actual pot
-                                if (prizeAmount > (totalPot * 0.8) || prizeAmount < 0) {
-                                    console.error(`[CRITICAL] Prize calculation anomaly: Pot=${totalPot}, Prize=${prizeAmount}`);
-                                    ws.send(JSON.stringify({ type: 'error', message: 'የሽልማት ስሌት ስህተት ተገኝቷል።' }));
-                                    return;
-                                }
-                                
-                                console.log(`Bingo Validated! User ${player.userId} won ${prizeAmount} ETB (Pot: ${totalPot}, Fee: ${totalPot * 0.2})`);
-                                
-                                // Prevent double crediting by checking if already processed
                                 if (gameState.winnerId) {
-                                    console.log("Winner already declared for this game.");
+                                    console.log("[DEBUG] Winner already declared for this game.");
+                                    ws.send(JSON.stringify({ type: 'error', message: 'ሌላ አሸናፊ ቀድሞ ተገኝቷል (Another winner already found)' }));
                                     return;
                                 }
+                                
                                 gameState.winnerId = player.userId;
+                                gameState.winner = {
+                                    userId: player.userId,
+                                    username: player.username,
+                                    cardId: cardIdToValidate,
+                                    prize: prizeAmount
+                                };
 
                                 Wallet.win(player.userId, prizeAmount, gameState.id).then(() => {
                                     startWinnerDisplay({
                                         userId: player.userId,
                                         username: player.username,
                                         telegramId: player.telegram_id || player.telegramId || '---',
-                                        cardId: player.selectedCardId,
+                                        cardId: cardIdToValidate,
                                         prize: prizeAmount
                                     });
                                 }).catch(err => {
@@ -2254,13 +2256,18 @@ wss.on('connection', (ws) => {
                                     gameState.winnerId = null; // Reset on failure
                                 });
                             } else {
-                                console.log(`Bingo Rejected for ${player.username}. Numbers called: ${gameState.calledNumbers.length}`);
+                                console.log(`[DEBUG] Bingo REJECTED for ${player.username}. Pattern not matched.`);
                                 ws.send(JSON.stringify({
                                     type: 'bingo_rejected',
                                     error: 'ቢንጎ ትክክል አይደለም'
                                 }));
                             }
+                        } else {
+                            console.log(`[DEBUG] claim_bingo REJECTED: No cardId provided or selected.`);
+                            ws.send(JSON.stringify({ type: 'error', message: 'ካርድ አልተመረጠም' }));
                         }
+                    } else {
+                        console.log(`[DEBUG] claim_bingo REJECTED: Game not in 'game' phase or player not found.`);
                     }
                     break;
 
