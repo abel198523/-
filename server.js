@@ -2218,6 +2218,13 @@ wss.on('connection', (ws) => {
                                 const totalPot = confirmedPlayersCount * (gameState.stakeAmount || 10);
                                 const prizeAmount = Math.floor(totalPot * 0.8);
                                 
+                                // STRICT LIMIT: Ensure prize never exceeds the calculated 80% of the actual pot
+                                if (prizeAmount > (totalPot * 0.8) || prizeAmount < 0) {
+                                    console.error(`[CRITICAL] Prize calculation anomaly: Pot=${totalPot}, Prize=${prizeAmount}`);
+                                    ws.send(JSON.stringify({ type: 'error', message: 'የሽልማት ስሌት ስህተት ተገኝቷል።' }));
+                                    return;
+                                }
+                                
                                 console.log(`Bingo Validated! User ${player.userId} won ${prizeAmount} ETB (Pot: ${totalPot}, Fee: ${totalPot * 0.2})`);
                                 
                                 // Prevent double crediting by checking if already processed
