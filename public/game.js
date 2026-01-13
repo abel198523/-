@@ -567,7 +567,8 @@ function confirmPreviewCard() {
             ws.send(JSON.stringify({
                 type: 'confirm_card',
                 cardId: selectedCardId,
-                stake: currentStake
+                stake: currentStake,
+                tg_id: currentUserId
             }));
         }
         
