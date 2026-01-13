@@ -3353,7 +3353,7 @@ app.post('/telebirr-webhook', async (req, res) => {
 
                     // Notify User
                     if (d.user_telegram_id && bot) {
-                        bot.sendMessage(d.user_telegram_id, `✅ አውቶ ዲፖዚትዎ ተረጋግጧል!\n\n💵 መጠን: ${amount.toFixed(2)} ብር\n🔑 ኮድ: ${transactionId}\n\nሒሳብዎ ላይ ተጨምሯል። መልካም ጨዋታ!`).catch(err => console.error('User notify error:', err));
+                        bot.sendMessage(d.user_telegram_id, `✅ Auto ዲፖዚትዎ ተረጋግጧል!\n\n💵 መጠን: ${amount.toFixed(2)} ብር\n🔑 ኮድ: ${transactionId}\n\nሒሳብዎ ላይ ተጨምሯል። መልካም ጨዋታ!`).catch(err => console.error('User notify error:', err));
                     }
 
                     return res.status(200).send("Deposit Processed Successfully");
