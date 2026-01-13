@@ -268,18 +268,26 @@ bot.on('contact', async (msg) => {
             const bonusAmount = 2.00;
             // Ensure referrals table exists and handle bonus
             try {
-                await db.query('INSERT INTO referrals (referrer_id, referred_id, bonus_amount) VALUES ($1, $2, $3)', [referrerId, userId, bonusAmount]);
+                // Ensure referrerId is treated as a string for telegram_id lookup if it's from match[1]
+                const referrerTelegramIdStr = referrerId.toString();
                 
-                // Add bonus to balance
-                await db.query('UPDATE wallets SET balance = balance + $1 WHERE user_id = $2', [bonusAmount, referrerId]);
+                // First find the referrer's internal ID
+                const referrerLookup = await db.query('SELECT id FROM users WHERE telegram_id = $1', [referrerTelegramIdStr]);
                 
-                // Notify referrer
-                const referrerResult = await db.query('SELECT telegram_id FROM users WHERE id = $1', [referrerId]);
-                if (referrerResult.rows.length > 0) {
-                    const referrerTelegramId = referrerResult.rows[0].telegram_id;
+                if (referrerLookup.rows.length > 0) {
+                    const referrerInternalId = referrerLookup.rows[0].id;
+                    
+                    await db.query('INSERT INTO referrals (referrer_id, referred_id, bonus_amount) VALUES ($1, $2, $3)', [referrerInternalId, userId, bonusAmount]);
+                    
+                    // Add bonus to balance
+                    await db.query('UPDATE wallets SET balance = balance + $1 WHERE user_id = $2', [bonusAmount, referrerInternalId]);
+                    
+                    // Notify referrer
                     const bonusMsg = `🎁 አዲስ ሰው በግብዣ ሊንክዎ ስለተመዘገበ የ ${bonusAmount} ብር ቦነስ አግኝተዋል!\n\n` +
                                    `👤 አዲስ ተመዝጋቢ: ${username}`;
-                    bot.sendMessage(referrerTelegramId.toString(), bonusMsg);
+                    bot.sendMessage(referrerTelegramIdStr, bonusMsg);
+                } else {
+                    console.warn(`Referrer with telegram_id ${referrerTelegramIdStr} not found in database.`);
                 }
             } catch (refErr) {
                 console.error('Referral bonus error:', refErr);
