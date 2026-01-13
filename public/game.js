@@ -1309,128 +1309,188 @@ function showWinnerDisplay(winner) {
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 20000;
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         `;
         document.body.appendChild(overlay);
     }
 
-    const borderColor = isMe ? '#00d984' : '#a855f7';
+    const borderColor = isMe ? '#00d984' : '#f39c12';
     const icon = isMe ? '🏆' : '🎉';
     const title = isMe ? 'እንኳን ደስ አለዎት!' : 'አሸናፊ ተገኝቷል!';
-    const actionColor = isMe ? '#00d984' : '#a855f7';
     
     const patternName = getPatternName(winner.pattern ? winner.pattern.type : 'bingo');
 
     overlay.innerHTML = `
-        <div style="
-            background: #1c2235;
-            width: 85%;
-            max-width: 340px;
-            padding: 20px;
-            border-radius: 24px;
+        <div class="winner-modal-professional" style="
+            background: linear-gradient(145deg, #1c2235, #161b2e);
+            width: 90%;
+            max-width: 380px;
+            padding: 30px 20px;
+            border-radius: 32px;
             border: 2px solid ${borderColor};
             text-align: center;
-            box-shadow: 0 0 40px ${borderColor}33;
-            animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            max-height: 95vh;
-            overflow-y: auto;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px ${borderColor}33;
+            animation: modalPopPro 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: #fff;
+            position: relative;
+            overflow: hidden;
         ">
+            <div style="position: absolute; top: -50px; left: -50px; width: 150px; height: 150px; background: ${borderColor}11; border-radius: 50%; blur: 40px;"></div>
+            
             <div style="
-                width: 50px;
-                height: 50px;
-                background: ${borderColor}1a;
-                border-radius: 50%;
+                width: 70px;
+                height: 70px;
+                background: ${borderColor}22;
+                border-radius: 20px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin: 0 auto 10px;
+                margin: 0 auto 20px;
+                transform: rotate(-10deg);
+                box-shadow: 0 10px 20px rgba(0,0,0,0.2);
             ">
-                <span style="font-size: 25px;">${icon}</span>
+                <span style="font-size: 40px;">${icon}</span>
             </div>
-            <h2 style="color: #fff; margin-bottom: 5px; font-size: 1.3em;">${title}</h2>
             
-            <div style="background: rgba(255,215,0,0.1); border-radius: 12px; padding: 10px; margin-bottom: 15px; border: 1px dashed #ffd700;">
-                <p style="color: #ffd700; font-weight: 800; font-size: 1.1em; margin-bottom: 5px;">🏆 ${patternName}</p>
-                <p style="color: #fff; font-size: 0.85em;">በ${patternName} አሸንፈዋል!</p>
-            </div>
-
-            <div style="margin-bottom: 10px;">
-                <p style="font-size: 1.1em; color: #fff; font-weight: 800; margin-bottom: 2px;">${winner.username || '---'}</p>
-                <p style="font-size: 0.8em; color: #00f2ff;">ID: ${winner.telegramId || '---'}</p>
-            </div>
-
-            <!-- Mini Card Preview -->
-            <div style="margin: 10px auto; width: 180px;">
-                <p style="color: #8890a6; font-size: 0.75em; margin-bottom: 5px;">ያሸነፈበት ካርድ (#${winner.cardId})</p>
+            <h2 style="color: #fff; margin-bottom: 5px; font-size: 1.6em; font-weight: 900; letter-spacing: -0.5px;">${title}</h2>
+            <p style="color: #8890a6; font-size: 0.9em; margin-bottom: 25px;">${winner.username || 'ያልታወቀ ተጫዋች'} በ${patternName} አሸንፏል!</p>
+            
+            <div style="
+                background: rgba(0,0,0,0.3);
+                border-radius: 24px;
+                padding: 20px;
+                margin-bottom: 25px;
+                border: 1px solid rgba(255,255,255,0.05);
+                position: relative;
+            ">
+                <div style="position: absolute; top: 10px; right: 15px; background: ${borderColor}; color: #000; padding: 2px 8px; border-radius: 10px; font-size: 0.7em; font-weight: 900;">ካርድ #${winner.cardId}</div>
                 <div id="winner-card-display" style="
                     display: grid;
                     grid-template-columns: repeat(5, 1fr);
-                    gap: 3px;
-                    background: rgba(0,0,0,0.2);
-                    padding: 5px;
-                    border-radius: 8px;
+                    gap: 6px;
+                    margin: 15px auto 0;
+                    width: 220px;
                 "></div>
             </div>
 
-            <div style="margin-bottom: 15px;">
-                <p style="color: #ffd700; font-size: 1.2em; font-weight: 800;">ሽልማት: ${winner.prize || 0} ብር</p>
+            <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 25px;">
+                <div style="text-align: left;">
+                    <p style="color: #8890a6; font-size: 0.75em; text-transform: uppercase; letter-spacing: 1px;">የሽልማት መጠን</p>
+                    <p style="color: #ffd700; font-size: 1.8em; font-weight: 900; line-height: 1;">${winner.prize || 0} <span style="font-size: 0.5em;">ETB</span></p>
+                </div>
             </div>
 
-            <div id="return-countdown" style="color: #8890a6; font-size: 0.85em; margin-bottom: 15px;">ወደ ካርድ መምረጫ ለመመለስ 5 ሰከንድ ቀርቷል...</div>
+            <div id="return-countdown-pro" style="
+                background: rgba(255,255,255,0.03);
+                padding: 12px;
+                border-radius: 16px;
+                color: #8890a6;
+                font-size: 0.85em;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+            ">
+                <div class="countdown-spinner"></div>
+                <span>በ <span id="cd-seconds">8</span> ሰከንድ ውስጥ ይመለሳል...</span>
+            </div>
         </div>
+        <style>
+            @keyframes modalPopPro {
+                0% { opacity: 0; transform: scale(0.9) translateY(20px); }
+                100% { opacity: 1; transform: scale(1) translateY(0); }
+            }
+            .countdown-spinner {
+                width: 14px;
+                height: 14px;
+                border: 2px solid rgba(136, 144, 166, 0.2);
+                border-top-color: #8890a6;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+            }
+            @keyframes spin { to { transform: rotate(360deg); } }
+            .winner-modal-professional .player-card-cell {
+                aspect-ratio: 1/1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(255,255,255,0.05);
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 700;
+                color: #5c637a;
+            }
+            .winner-modal-professional .player-card-cell.marked {
+                background: rgba(255,255,255,0.1);
+                color: #fff;
+            }
+            .winner-modal-professional .player-card-cell.winning-cell {
+                background: ${borderColor} !important;
+                color: #000 !important;
+                box-shadow: 0 0 15px ${borderColor}aa;
+                transform: scale(1.05);
+                z-index: 2;
+            }
+        </style>
     `;
 
     overlay.style.display = 'flex';
     
-    // Highlight the winning pattern on the mini card
-    if (winner.pattern) {
-        highlightWinningPattern(winner.cardId, winner.pattern);
+    // Custom render for the professional winner card
+    const winnerCardContainer = document.getElementById('winner-card-display');
+    const cardData = BINGO_CARDS[winner.cardId];
+    if (winnerCardContainer && cardData) {
+        winnerCardContainer.innerHTML = '';
+        cardData.forEach((row, rowIndex) => {
+            row.forEach((num, colIndex) => {
+                const cell = document.createElement('div');
+                cell.className = 'player-card-cell';
+                const cellIndex = rowIndex * 5 + colIndex;
+                
+                if (rowIndex === 2 && colIndex === 2) {
+                    cell.classList.add('free-space', 'marked');
+                    cell.textContent = '★';
+                } else {
+                    cell.textContent = num;
+                    if (calledNumbersSet && calledNumbersSet.has(num)) {
+                        cell.classList.add('marked');
+                    }
+                }
+                
+                if (winner.pattern && winner.pattern.indices.includes(cellIndex)) {
+                    cell.classList.add('winning-cell');
+                }
+                winnerCardContainer.appendChild(cell);
+            });
+        });
     }
     
-    // Start 5 second countdown
-    let timeLeft = 5;
-    const countdownEl = document.getElementById('return-countdown');
+    // Start countdown
+    let timeLeft = 8;
+    const cdSeconds = document.getElementById('cd-seconds');
     const interval = setInterval(() => {
         timeLeft--;
-        if (countdownEl) {
-            countdownEl.textContent = `ወደ ካርድ መምረጫ ለመመለስ ${timeLeft} ሰከንድ ቀርቷል...`;
-        }
+        if (cdSeconds) cdSeconds.textContent = timeLeft;
         if (timeLeft <= 0) {
             clearInterval(interval);
             overlay.style.display = 'none';
-            // Return to selection screen
-            const gameScreen = document.getElementById('game-screen');
-            const selectionScreen = document.getElementById('selection-screen');
-            if (gameScreen) gameScreen.style.display = 'none';
-            if (selectionScreen) selectionScreen.style.display = 'flex';
-            cardConfirmed = false;
-            selectedCardId = null;
-            generateCardSelection();
-            updateBackButtonVisibility();
+            handlePhaseChange({ phase: 'selection' });
         }
     }, 1000);
 
     if (isMe && typeof confetti === 'function') {
-        const duration = 5 * 1000;
-        const animationEnd = Date.now() + duration;
-        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 30000 };
-
-        const randomInRange = (min, max) => Math.random() * (max - min) + min;
-
-        const confettiInterval = setInterval(function() {
-            const timeRemaining = animationEnd - Date.now();
-            if (timeRemaining <= 0) return clearInterval(confettiInterval);
-
-            const particleCount = 50 * (timeRemaining / duration);
-            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-            confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-        }, 250);
+        confetti({
+            particleCount: 150,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: [borderColor, '#ffffff', '#ffd700']
+        });
     }
 }
 
