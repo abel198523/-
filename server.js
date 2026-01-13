@@ -494,6 +494,7 @@ bot.onText(/💸 Withdraw/, async (msg) => {
         }
 
         const balance = parseFloat(balanceResult.rows[0].balance || 0);
+        const minBuffer = 50;
 
         if (balance < 100) {
             await bot.sendMessage(chatId, `❌ በቂ ሒሳብ የለም። ገንዘብ ለማውጣት ቢያንስ 100 ብር ሊኖርዎት ይገባል።\n\n💰 የእርስዎ ቀሪ ሒሳብ: ${balance.toFixed(2)} ብር`);
@@ -526,15 +527,22 @@ bot.onText(/💸 Withdraw/, async (msg) => {
             await bot.sendMessage(chatId, message, { reply_markup: getMainKeyboard(telegramId) });
             return;
         }
+
+        const maxWithdrawal = balance - minBuffer;
+        if (maxWithdrawal <= 0) {
+            await bot.sendMessage(chatId, `❌ ገንዘብ ማውጣት አይችሉም። ዋሌትዎ ላይ ቢያንስ ${minBuffer} ብር መቅረት አለበት።\n\n💰 የእርስዎ ቀሪ ሒሳብ: ${balance.toFixed(2)} ብር`);
+            return;
+        }
         
         userStates.set(telegramId, { 
             action: 'withdraw', 
             step: 'amount',
-            userId: eligibility.userId 
+            userId: eligibility.userId,
+            maxAmount: maxWithdrawal
         });
         
         await bot.sendMessage(chatId, 
-            `✅ መስፈርቶቹን አሟልተዋል!\n\n💰 ቀሪ ሒሳብ: ${balance.toFixed(2)} ብር\n\n💵 ማውጣት የሚፈልጉትን መጠን ያስገቡ:`,
+            `✅ መስፈርቶቹን አሟልተዋል!\n\n💰 ቀሪ ሒሳብ: ${balance.toFixed(2)} ብር\n⚠️ ማሳሰቢያ: ዋሌትዎ ላይ ${minBuffer} ብር መቅረት ስላለበት ማውጣት የሚችሉት ከፍተኛ መጠን ${maxWithdrawal.toFixed(2)} ብር ነው።\n\n💵 ማውጣት የሚፈልጉትን መጠን ያስገቡ:`,
             { reply_markup: { keyboard: [[{ text: "❌ ሰርዝ" }]], resize_keyboard: true } }
         );
     } catch (error) {
