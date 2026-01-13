@@ -400,6 +400,61 @@ bot.on('message', async (msg) => {
     }
 });
 
+app.get('/api/check-registration/:telegramId', async (req, res) => {
+    try {
+        const result = await db.query('SELECT id FROM users WHERE telegram_id = $1', [req.params.telegramId]);
+        res.json({ registered: result.rows.length > 0 });
+    } catch (err) {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+app.get('/api/wallet/:telegramId', async (req, res) => {
+    try {
+        const result = await db.query(
+            'SELECT w.balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
+            [req.params.telegramId]
+        );
+        res.json({ balance: result.rows[0]?.balance || 0 });
+    } catch (err) {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+app.get('/api/profile/:telegramId', async (req, res) => {
+    try {
+        const result = await db.query(
+            'SELECT u.id, u.username, u.telegram_id as "telegramId", u.phone_number as "phoneNumber", w.balance, ' +
+            '(SELECT COUNT(*) FROM game_participants gp WHERE gp.user_id = u.id) as "totalGames", ' +
+            '(SELECT COUNT(*) FROM game_participants gp WHERE gp.user_id = u.id AND gp.is_winner = true) as wins ' +
+            'FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
+            [req.params.telegramId]
+        );
+        if (result.rows.length > 0) {
+            res.json({ success: true, profile: result.rows[0] });
+        } else {
+            res.status(404).json({ success: false, message: 'User not found' });
+        }
+    } catch (err) {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
+app.get('/api/transactions/:telegramId', async (req, res) => {
+    try {
+        const result = await db.query(
+            'SELECT type, amount, status, created_at FROM deposits d JOIN users u ON d.user_id = u.id WHERE u.telegram_id = $1 ' +
+            'UNION ALL ' +
+            'SELECT \'withdrawal\' as type, amount, status, created_at FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE u.telegram_id = $1 ' +
+            'ORDER BY created_at DESC LIMIT 10',
+            [req.params.telegramId]
+        );
+        res.json({ transactions: result.rows });
+    } catch (err) {
+        res.status(500).json({ error: 'Database error' });
+    }
+});
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on port ${PORT}`);
 });

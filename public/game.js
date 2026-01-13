@@ -650,35 +650,25 @@ function autoMarkPlayerCard(number) {
 
 function initializeUser() {
     try {
-        if (window.Telegram && window.Telegram.WebApp) {
-            const tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
-            
-            if (tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.id) {
-                currentUserId = tg.initDataUnsafe.user.id;
-                console.log('Telegram user ID:', currentUserId);
-            } else {
-                const urlParams = new URLSearchParams(window.location.search);
-                const tgId = urlParams.get('tg_id');
-                if (tgId) {
-                    currentUserId = parseInt(tgId);
-                    console.log('Telegram ID from URL:', currentUserId);
-                } else {
-                    currentUserId = null;
-                    console.log('No Telegram user ID available');
-                }
-            }
+        const urlParams = new URLSearchParams(window.location.search);
+        const tgIdFromUrl = urlParams.get('tg_id');
+        
+        if (tgIdFromUrl) {
+            currentUserId = tgIdFromUrl;
+            console.log('User ID from URL:', currentUserId);
+            localStorage.setItem('bingo_tg_id', currentUserId);
+        } else if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+            currentUserId = window.Telegram.WebApp.initDataUnsafe.user.id.toString();
+            console.log('User ID from Telegram WebApp:', currentUserId);
+            localStorage.setItem('bingo_tg_id', currentUserId);
         } else {
-            const urlParams = new URLSearchParams(window.location.search);
-            const tgId = urlParams.get('tg_id');
-            if (tgId) {
-                currentUserId = parseInt(tgId);
-                console.log('Telegram ID from URL:', currentUserId);
-            } else {
-                currentUserId = null;
-                console.log('Telegram WebApp not available');
-            }
+            currentUserId = localStorage.getItem('bingo_tg_id');
+            console.log('User ID from LocalStorage:', currentUserId);
+        }
+
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand();
         }
     } catch (error) {
         console.error('Error initializing user:', error);
