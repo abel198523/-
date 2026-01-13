@@ -885,6 +885,8 @@ function updateGameStats(data) {
     }
 }
 
+let bingoButtonInitialized = false;
+
 function handleWebSocketMessage(data) {
     // Update stats for any message that carries them
     updateGameStats(data);
@@ -911,6 +913,11 @@ function handleWebSocketMessage(data) {
             if (status) status.textContent = '';
         }
         return;
+    }
+
+    if (!bingoButtonInitialized) {
+        initializeBingoButton();
+        bingoButtonInitialized = true;
     }
 
     switch (data.type) {
