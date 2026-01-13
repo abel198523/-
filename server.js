@@ -82,6 +82,10 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// Serve static files
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // --- Telegram Bot Logic Added ---
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const RENDER_SERVER_URL = process.env.RENDER_SERVER_URL;
@@ -100,6 +104,9 @@ if (!MINI_APP_URL) {
         MINI_APP_URL = RENDER_SERVER_URL;
     }
 }
+
+// Fallback for PORT to support different environments
+const PORT = process.env.PORT || 5000;
 
 // Ensure MINI_APP_URL doesn't have trailing slash for consistency
 if (MINI_APP_URL && MINI_APP_URL.endsWith('/')) {
@@ -3433,8 +3440,6 @@ app.post('/api/admin/withdrawals/:id/reject', async (req, res) => {
 });
 
 // ================== End Admin API Routes ==================
-
-const PORT = process.env.PORT || 5000;
 
 async function startServer() {
     try {
