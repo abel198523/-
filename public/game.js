@@ -1658,7 +1658,8 @@ function claimBingo() {
         console.log('Sending claim_bingo for card:', selectedCardId);
         currentSocket.send(JSON.stringify({
             type: 'claim_bingo',
-            cardId: selectedCardId
+            cardId: selectedCardId,
+            tg_id: currentUserId
         }));
     } else {
         console.error('WebSocket not connected', { 
