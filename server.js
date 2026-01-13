@@ -2216,9 +2216,9 @@ wss.on('connection', (ws) => {
                                 
                                 // Calculate prize (80% of pot, 20% fee)
                                 const totalPot = confirmedPlayersCount * (gameState.stakeAmount || 10);
-                                const prizeAmount = totalPot * 0.8;
+                                const prizeAmount = Math.floor(totalPot * 0.8);
                                 
-                                console.log(`Bingo Validated! User ${player.userId} won ${prizeAmount} ETB (Pot: ${totalPot})`);
+                                console.log(`Bingo Validated! User ${player.userId} won ${prizeAmount} ETB (Pot: ${totalPot}, Fee: ${totalPot * 0.2})`);
                                 
                                 // Prevent double crediting by checking if already processed
                                 if (gameState.winnerId) {
