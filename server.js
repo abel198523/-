@@ -257,10 +257,10 @@ bot.on('contact', async (msg) => {
         }
         const userId = userResult.rows[0].id;
 
-        // Initialize wallet with 10 ETB bonus
+        // Initialize wallet with 0 ETB (Bonus disabled)
         await db.query(
             'INSERT INTO wallets (user_id, balance) VALUES ($1, $2)',
-            [userId, 10.00]
+            [userId, 0.00]
         );
 
         // If referred, handle referral bonus
