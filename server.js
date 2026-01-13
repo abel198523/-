@@ -2220,6 +2220,13 @@ wss.on('connection', (ws) => {
                                 
                                 console.log(`Bingo Validated! User ${player.userId} won ${prizeAmount} ETB (Pot: ${totalPot})`);
                                 
+                                // Prevent double crediting by checking if already processed
+                                if (gameState.winnerId) {
+                                    console.log("Winner already declared for this game.");
+                                    return;
+                                }
+                                gameState.winnerId = player.userId;
+
                                 Wallet.win(player.userId, prizeAmount, gameState.id).then(() => {
                                     startWinnerDisplay({
                                         userId: player.userId,
@@ -2230,6 +2237,7 @@ wss.on('connection', (ws) => {
                                     });
                                 }).catch(err => {
                                     console.error('Error crediting win prize:', err);
+                                    gameState.winnerId = null; // Reset on failure
                                 });
                             } else {
                                 console.log(`Bingo Rejected for ${player.username}. Numbers called: ${gameState.calledNumbers.length}`);
@@ -2411,7 +2419,7 @@ app.post('/api/register', async (req, res) => {
         
         await db.query(
             `INSERT INTO wallets (user_id, balance, currency) 
-             VALUES ($1, 10.00, 'ETB')`,
+             VALUES ($1, 0.00, 'ETB')`,
             [newUserId]
         );
 
