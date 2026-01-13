@@ -85,13 +85,8 @@ class Game {
             [gameId, userId]
         );
 
-        /* 
-        // Update winner's wallet balance - TEMPORARILY DISABLED
-        await db.query(
-            `UPDATE wallets SET balance = balance + $1 WHERE user_id = $2`,
-            [winnerPrize, userId]
-        );
-        */
+        const Wallet = require('./Wallet');
+        await Wallet.win(userId, winnerPrize, gameId);
         
         return result.rows[0];
     }

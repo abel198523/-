@@ -228,9 +228,10 @@ bot.on('contact', async (msg) => {
     
     try {
         // Check if already registered
-        const existingUser = await db.query('SELECT * FROM users WHERE telegram_id = $1', [senderId.toString()]);
+        const existingUser = await db.query('SELECT id FROM users WHERE telegram_id = $1', [senderId.toString()]);
         
         if (existingUser.rows.length > 0) {
+            const userId = existingUser.rows[0].id;
             console.log(`User ${senderId} already registered. Showing keyboard.`);
             bot.sendMessage(chatId, "እርስዎ ቀድሞ ተመዝግበዋል! 'Play' ን ይጫኑ።", {
                 reply_markup: getMainKeyboard(senderId)
@@ -242,11 +243,10 @@ bot.on('contact', async (msg) => {
         const state = userStates.get(senderId);
         const referrerId = (state?.action === 'register') ? state.referredBy : null;
 
-        // Register new user with 20 ETB bonus
+        // Register new user
         const username = msg.from.username || `Player_${senderId}`;
         console.log(`Attempting to register user: ${senderId}, Phone: ${phoneNumber}, Referrer: ${referrerId}`);
         
-        // Ensure referrals table exists by using a sub-query or checking for column
         const userResult = await db.query(
             'INSERT INTO users (telegram_id, username, phone_number, is_registered) VALUES ($1, $2, $3, $4) RETURNING id',
             [senderId.toString(), username, phoneNumber, true]
@@ -257,9 +257,9 @@ bot.on('contact', async (msg) => {
         }
         const userId = userResult.rows[0].id;
 
-        // Create wallet with 10 ETB bonus
+        // Initialize wallet with 10 ETB bonus in game_balance
         await db.query(
-            'INSERT INTO wallets (user_id, balance) VALUES ($1, $2)',
+            'INSERT INTO wallets (user_id, game_balance) VALUES ($1, $2)',
             [userId, 10.00]
         );
 
@@ -269,7 +269,9 @@ bot.on('contact', async (msg) => {
             // Ensure referrals table exists and handle bonus
             try {
                 await db.query('INSERT INTO referrals (referrer_id, referred_id, bonus_amount) VALUES ($1, $2, $3)', [referrerId, userId, bonusAmount]);
-                await db.query('UPDATE wallets SET balance = balance + $1 WHERE user_id = $2', [bonusAmount, referrerId]);
+                
+                // Add bonus to game_balance
+                await db.query('UPDATE wallets SET game_balance = game_balance + $1 WHERE user_id = $2', [bonusAmount, referrerId]);
                 
                 // Notify referrer
                 const referrerResult = await db.query('SELECT telegram_id FROM users WHERE id = $1', [referrerId]);
@@ -303,17 +305,22 @@ bot.onText(/💰 Check Balance/, async (msg) => {
     const telegramId = msg.from.id;
     
     try {
-        const result = await db.query(
-            'SELECT w.balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
-            [telegramId.toString()]
-        );
-        
-        if (result.rows.length > 0) {
-            const balance = parseFloat(result.rows[0].balance).toFixed(2);
-            bot.sendMessage(chatId, `💰 የእርስዎ ቀሪ ሒሳብ: ${balance} ብር`);
-        } else {
+        const userResult = await db.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId.toString()]);
+        if (userResult.rows.length === 0) {
             bot.sendMessage(chatId, "እባክዎ መጀመሪያ ይመዝገቡ። /start ይላኩ።");
+            return;
         }
+
+        const userId = userResult.rows[0].id;
+        const balanceInfo = await Wallet.getBalance(userId);
+        
+        const message = `💰 <b>የሂሳብ መረጃ</b>\n\n` +
+                        `💵 ቶታል ባላንስ: <b>${balanceInfo.total.toFixed(2)} ብር</b>\n` +
+                        `🎮 ጌም ባላንስ: <b>${balanceInfo.game_balance.toFixed(2)} ብር</b>\n` +
+                        `💸 ዊዝድሮወብል ባላንስ: <b>${balanceInfo.withdrawable_balance.toFixed(2)} ብር</b>\n\n` +
+                        `💡 ማሳሰቢያ: ዊዝድሮው ማድረግ የሚቻለው ከዊዝድሮወብል ባላንስ ብቻ ነው።`;
+        
+        bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
     } catch (error) {
         console.error('Balance check error:', error);
         bot.sendMessage(chatId, "ይቅርታ፣ ሒሳብዎን ማግኘት አልተቻለም።");
@@ -473,20 +480,18 @@ bot.onText(/💸 Withdraw/, async (msg) => {
     const telegramId = msg.from.id;
     
     try {
-        const balanceResult = await db.query(
-            'SELECT w.balance FROM users u JOIN wallets w ON u.id = w.user_id WHERE u.telegram_id = $1',
-            [telegramId.toString()]
-        );
+        const userResult = await db.query('SELECT id FROM users WHERE telegram_id = $1', [telegramId.toString()]);
         
-        if (balanceResult.rows.length === 0) {
+        if (userResult.rows.length === 0) {
             await bot.sendMessage(chatId, '❌ እባክዎ መጀመሪያ ይመዝገቡ።');
             return;
         }
 
-        const balance = parseFloat(balanceResult.rows[0].balance || 0);
+        const userId = userResult.rows[0].id;
+        const balanceInfo = await Wallet.getBalance(userId);
 
-        if (balance < 100) {
-            await bot.sendMessage(chatId, `❌ በቂ ሒሳብ የለም። ገንዘብ ለማውጣት ቢያንስ 100 ብር ሊኖርዎት ይገባል።\n\n💰 የእርስዎ ቀሪ ሒሳብ: ${balance.toFixed(2)} ብር`);
+        if (balanceInfo.withdrawable_balance < 100) {
+            await bot.sendMessage(chatId, `❌ በቂ ዊዝድሮወብል ባላንስ የለም። ገንዘብ ለማውጣት ቢያንስ 100 ብር በዊዝድሮወብል ባላንስዎ ሊኖርዎት ይገባል።\n\n💸 ዊዝድሮወብል ባላንስ: ${balanceInfo.withdrawable_balance.toFixed(2)} ብር`);
             return;
         }
 
@@ -524,7 +529,7 @@ bot.onText(/💸 Withdraw/, async (msg) => {
         });
         
         await bot.sendMessage(chatId, 
-            `✅ መስፈርቶቹን አሟልተዋል!\n\n💰 ቀሪ ሒሳብ: ${balance.toFixed(2)} ብር\n\n💵 ማውጣት የሚፈልጉትን መጠን ያስገቡ:`,
+            `✅ መስፈርቶቹን አሟልተዋል!\n\n💸 ዊዝድሮወብል ባላንስ: ${balanceInfo.withdrawable_balance.toFixed(2)} ብር\n\n💵 ማውጣት የሚፈልጉትን መጠን ያስገቡ:`,
             { reply_markup: { keyboard: [[{ text: "❌ ሰርዝ" }]], resize_keyboard: true } }
         );
     } catch (error) {

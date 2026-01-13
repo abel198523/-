@@ -3,12 +3,17 @@ const db = require('../db/database');
 class Wallet {
     static async getBalance(userId) {
         const result = await db.query(
-            `SELECT balance FROM wallets WHERE user_id = $1`,
+            `SELECT game_balance, withdrawable_balance, balance FROM wallets WHERE user_id = $1`,
             [userId]
         );
+        const row = result.rows[0];
+        const gameBalance = parseFloat(row?.game_balance || 0);
+        const withdrawableBalance = parseFloat(row?.withdrawable_balance || 0);
+        
         return {
-            balance: result.rows[0]?.balance || 0,
-            total: parseFloat(result.rows[0]?.balance || 0)
+            game_balance: gameBalance,
+            withdrawable_balance: withdrawableBalance,
+            total: gameBalance + withdrawableBalance
         };
     }
 
@@ -18,17 +23,35 @@ class Wallet {
         try {
             await client.query('BEGIN');
             
-            const balanceResult = await client.query(
-                `SELECT balance FROM wallets WHERE user_id = $1 FOR UPDATE`,
+            // Get total deposit history
+            const depositHistory = await client.query(
+                `SELECT COALESCE(SUM(amount), 0) as total FROM deposits WHERE user_id = $1 AND status = 'confirmed'`,
+                [userId]
+            );
+            const totalDeposited = parseFloat(depositHistory.rows[0].total) + parseFloat(amount);
+            
+            const walletResult = await client.query(
+                `SELECT game_balance, withdrawable_balance FROM wallets WHERE user_id = $1 FOR UPDATE`,
                 [userId]
             );
             
-            const balanceBefore = parseFloat(balanceResult.rows[0]?.balance || 0);
-            const balanceAfter = balanceBefore + parseFloat(amount);
+            let gameBalance = parseFloat(walletResult.rows[0]?.game_balance || 0);
+            let withdrawableBalance = parseFloat(walletResult.rows[0]?.withdrawable_balance || 0);
+            const balanceBefore = gameBalance + withdrawableBalance;
+            
+            if (totalDeposited >= 100) {
+                // If they crossed 100 ETB, move everything to withdrawable
+                withdrawableBalance += gameBalance + parseFloat(amount);
+                gameBalance = 0;
+            } else {
+                gameBalance += parseFloat(amount);
+            }
+            
+            const balanceAfter = gameBalance + withdrawableBalance;
             
             await client.query(
-                `UPDATE wallets SET balance = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2`,
-                [balanceAfter, userId]
+                `UPDATE wallets SET game_balance = $1, withdrawable_balance = $2, updated_at = CURRENT_TIMESTAMP WHERE user_id = $3`,
+                [gameBalance, withdrawableBalance, userId]
             );
             
             await client.query(
@@ -39,7 +62,7 @@ class Wallet {
             
             await client.query('COMMIT');
             
-            return { success: true, balance: balanceAfter };
+            return { success: true, game_balance: gameBalance, withdrawable_balance: withdrawableBalance, total: balanceAfter };
         } catch (err) {
             await client.query('ROLLBACK');
             throw err;
@@ -54,23 +77,26 @@ class Wallet {
         try {
             await client.query('BEGIN');
             
-            const balanceResult = await client.query(
-                `SELECT balance FROM wallets WHERE user_id = $1 FOR UPDATE`,
+            const walletResult = await client.query(
+                `SELECT withdrawable_balance, game_balance FROM wallets WHERE user_id = $1 FOR UPDATE`,
                 [userId]
             );
             
-            const balanceBefore = parseFloat(balanceResult.rows[0]?.balance || 0);
+            let withdrawableBalance = parseFloat(walletResult.rows[0]?.withdrawable_balance || 0);
+            let gameBalance = parseFloat(walletResult.rows[0]?.game_balance || 0);
+            const balanceBefore = withdrawableBalance + gameBalance;
             
-            if (balanceBefore < amount) {
+            if (withdrawableBalance < amount) {
                 await client.query('ROLLBACK');
-                return { success: false, error: 'Insufficient balance for withdrawal' };
+                return { success: false, error: 'Insufficient withdrawable balance' };
             }
             
-            const balanceAfter = balanceBefore - parseFloat(amount);
+            withdrawableBalance -= parseFloat(amount);
+            const balanceAfter = withdrawableBalance + gameBalance;
             
             await client.query(
-                `UPDATE wallets SET balance = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2`,
-                [balanceAfter, userId]
+                `UPDATE wallets SET withdrawable_balance = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2`,
+                [withdrawableBalance, userId]
             );
             
             await client.query(
@@ -81,7 +107,7 @@ class Wallet {
             
             await client.query('COMMIT');
             
-            return { success: true, balance: balanceAfter };
+            return { success: true, withdrawable_balance: withdrawableBalance, total: balanceAfter };
         } catch (err) {
             await client.query('ROLLBACK');
             throw err;
@@ -96,35 +122,47 @@ class Wallet {
         try {
             await client.query('BEGIN');
             
-            const balanceResult = await client.query(
-                `SELECT balance FROM wallets WHERE user_id = $1 FOR UPDATE`,
+            const walletResult = await client.query(
+                `SELECT game_balance, withdrawable_balance FROM wallets WHERE user_id = $1 FOR UPDATE`,
                 [userId]
             );
             
-            let balance = parseFloat(balanceResult.rows[0]?.balance || 0);
+            let gameBalance = parseFloat(walletResult.rows[0]?.game_balance || 0);
+            let withdrawableBalance = parseFloat(walletResult.rows[0]?.withdrawable_balance || 0);
+            const balanceBefore = gameBalance + withdrawableBalance;
             
-            if (balance < amount) {
+            if (balanceBefore < amount) {
                 await client.query('ROLLBACK');
                 return { success: false, error: 'Insufficient balance' };
             }
             
-            const balanceBefore = balance;
-            balance -= amount;
+            // Deduct from game_balance first, then withdrawable_balance
+            let remainingToDeduct = parseFloat(amount);
+            if (gameBalance >= remainingToDeduct) {
+                gameBalance -= remainingToDeduct;
+                remainingToDeduct = 0;
+            } else {
+                remainingToDeduct -= gameBalance;
+                gameBalance = 0;
+                withdrawableBalance -= remainingToDeduct;
+            }
+            
+            const balanceAfter = gameBalance + withdrawableBalance;
             
             await client.query(
-                `UPDATE wallets SET balance = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2`,
-                [balance, userId]
+                `UPDATE wallets SET game_balance = $1, withdrawable_balance = $2, updated_at = CURRENT_TIMESTAMP WHERE user_id = $3`,
+                [gameBalance, withdrawableBalance, userId]
             );
             
             await client.query(
                 `INSERT INTO transactions (user_id, type, amount, balance_before, balance_after, description, game_id)
                  VALUES ($1, 'stake', $2, $3, $4, $5, $6)`,
-                [userId, amount, balanceBefore, balance, `Stake for game #${gameId}`, gameId]
+                [userId, amount, balanceBefore, balanceAfter, `Stake for game #${gameId}`, gameId]
             );
             
             await client.query('COMMIT');
             
-            return { success: true, balance: balance };
+            return { success: true, total: balanceAfter };
         } catch (err) {
             await client.query('ROLLBACK');
             throw err;
@@ -139,17 +177,32 @@ class Wallet {
         try {
             await client.query('BEGIN');
             
-            const balanceResult = await client.query(
-                `SELECT balance FROM wallets WHERE user_id = $1 FOR UPDATE`,
+            const depositHistory = await client.query(
+                `SELECT COALESCE(SUM(amount), 0) as total FROM deposits WHERE user_id = $1 AND status = 'confirmed'`,
+                [userId]
+            );
+            const totalDeposited = parseFloat(depositHistory.rows[0].total);
+            
+            const walletResult = await client.query(
+                `SELECT game_balance, withdrawable_balance FROM wallets WHERE user_id = $1 FOR UPDATE`,
                 [userId]
             );
             
-            const balanceBefore = parseFloat(balanceResult.rows[0]?.balance || 0);
-            const balanceAfter = balanceBefore + parseFloat(amount);
+            let gameBalance = parseFloat(walletResult.rows[0]?.game_balance || 0);
+            let withdrawableBalance = parseFloat(walletResult.rows[0]?.withdrawable_balance || 0);
+            const balanceBefore = gameBalance + withdrawableBalance;
+            
+            if (totalDeposited >= 100) {
+                withdrawableBalance += parseFloat(amount);
+            } else {
+                gameBalance += parseFloat(amount);
+            }
+            
+            const balanceAfter = gameBalance + withdrawableBalance;
             
             await client.query(
-                `UPDATE wallets SET balance = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2`,
-                [balanceAfter, userId]
+                `UPDATE wallets SET game_balance = $1, withdrawable_balance = $2, updated_at = CURRENT_TIMESTAMP WHERE user_id = $3`,
+                [gameBalance, withdrawableBalance, userId]
             );
             
             await client.query(
@@ -160,7 +213,7 @@ class Wallet {
             
             await client.query('COMMIT');
             
-            return { success: true, balance: balanceAfter };
+            return { success: true, total: balanceAfter };
         } catch (err) {
             await client.query('ROLLBACK');
             throw err;

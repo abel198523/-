@@ -101,7 +101,9 @@ async function initializeDatabase() {
             CREATE TABLE IF NOT EXISTS wallets (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-                balance DECIMAL(10, 2) DEFAULT 0.00,
+                balance DECIMAL(10, 2) DEFAULT 0.00, -- legacy field, we'll use game_balance and withdrawable_balance
+                game_balance DECIMAL(10, 2) DEFAULT 0.00,
+                withdrawable_balance DECIMAL(10, 2) DEFAULT 0.00,
                 currency VARCHAR(10) DEFAULT 'ETB',
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(user_id)
