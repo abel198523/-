@@ -85,11 +85,13 @@ class Game {
             [gameId, userId]
         );
 
-        // Update winner's wallet balance
+        /* 
+        // Update winner's wallet balance - TEMPORARILY DISABLED
         await db.query(
             `UPDATE wallets SET balance = balance + $1 WHERE user_id = $2`,
             [winnerPrize, userId]
         );
+        */
         
         return result.rows[0];
     }
