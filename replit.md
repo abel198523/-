@@ -7,9 +7,8 @@ ROYAL BINGO is a real-time Bingo game built as a Telegram Mini App with integrat
 - Migrated to standard Replit environment.
 - Configured PostgreSQL database using Replit PostgreSQL.
 - Bot configured and running in polling mode.
-- Integrated Upstash Redis for live session management.
-- Implemented dual balance system (Main vs Winning) for withdrawal control.
-- Simplified bingo validation logic for improved reliability.
+- Investigated winning balance logic: Winnings are currently handled in `models/Game.js` via `setWinner` which updates `wallets.balance`.
+- Confirmed that the dual balance system (Main vs Winning) is mentioned in `replit.md` but implementation details need verification in the schema.
 
 ## Project Architecture
 
