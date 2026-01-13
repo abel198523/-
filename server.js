@@ -791,19 +791,20 @@ bot.on('message', async (msg) => {
             let finalCode = rawText;
             let finalAmount = state.amount;
             
+            // Extract code and handle long confirmation messages
             if (txIdMatch) {
                 finalCode = txIdMatch[1].trim().toUpperCase();
                 console.log(`Extracted Transaction ID: ${finalCode}`);
             } else if (/^[A-Z0-9]{8,25}$/i.test(rawText)) {
                 finalCode = rawText.toUpperCase();
-            } else if (rawText.length > 50) {
-                // If it's a very long text (like a full SMS), we take a snippet or use the whole thing
-                // The DB column is now TEXT, so it can handle it, but we'll try to find any alphanumeric string
-                const generalCodeMatch = rawText.match(/[A-Z0-9]{8,20}/i);
+            } else {
+                // If it's a long message, try to find any alphanumeric string that looks like a code
+                const generalCodeMatch = rawText.match(/[A-Z0-9]{8,25}/i);
                 if (generalCodeMatch) {
                     finalCode = generalCodeMatch[0].toUpperCase();
                 } else {
-                    finalCode = rawText.substring(0, 100); 
+                    // Fallback: take the first part or use a reasonable limit
+                    finalCode = rawText.substring(0, 50).toUpperCase();
                 }
             }
             
