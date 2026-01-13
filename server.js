@@ -2314,6 +2314,23 @@ wss.on('connection', (ws) => {
     });
 });
 
+app.get('/api/admin/high-balances', async (req, res) => {
+    try {
+        const result = await db.query(
+            `SELECT u.id, u.username, u.telegram_id, u.phone_number, w.balance 
+             FROM users u 
+             JOIN wallets w ON u.id = w.user_id 
+             WHERE w.balance > 0
+             ORDER BY w.balance DESC 
+             LIMIT 50`
+        );
+        res.json(result.rows);
+    } catch (err) {
+        console.error('High balance error:', err);
+        res.status(500).json({ error: 'Failed to fetch high balances' });
+    }
+});
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 

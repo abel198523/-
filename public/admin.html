@@ -422,9 +422,27 @@
                 <h2>ብሮድካስት (Broadcast)</h2>
                 <p style="color: #95a5a6; margin-top: 10px;">መልእክት ለሁሉም መላኪያ</p>
             </div>
+            <div class="action-card" onclick="openSubScreen('high-balances-screen')">
+                <i>💰</i>
+                <h2>ትልልቅ ባላንሶች (High Balances)</h2>
+                <p style="color: #95a5a6; margin-top: 10px;">ከፍተኛ ገንዘብ ያላቸው ተጠቃሚዎች</p>
+            </div>
     </div>
 
     <!-- Sub Screens -->
+    <div id="high-balances-screen" class="sub-screen">
+        <div class="sub-screen-header">
+            <button class="close-sub-btn" onclick="closeSubScreen('high-balances-screen')">← ተመለስ</button>
+            <h2>💰 ትልልቅ ባላንስ ያላቸው ተጠቃሚዎች</h2>
+        </div>
+        <div class="sub-content">
+            <div class="section">
+                <div id="highBalancesTable">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="broadcast-screen" class="sub-screen">
         <div class="sub-screen-header">
             <button class="close-sub-btn" onclick="closeSubScreen('broadcast-screen')">← ተመለስ</button>
@@ -686,6 +704,54 @@
             } catch (err) {
                 statusDiv.innerHTML = `<div style="color: #e74c3c;">❌ ስህተት፡ ${err.message}</div>`;
             }
+        }
+
+        async function loadHighBalances() {
+            const container = document.getElementById('highBalancesTable');
+            container.innerHTML = '<div class="loading">በመጫን ላይ...</div>';
+            
+            try {
+                const res = await fetch('/api/admin/high-balances');
+                const users = await res.json();
+                
+                if (users.length === 0) {
+                    container.innerHTML = '<div class="empty-state">ምንም ተጠቃሚ አልተገኘም</div>';
+                    return;
+                }
+
+                let html = `<table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Phone / TG</th>
+                            <th>Balance</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                
+                users.forEach(u => {
+                    html += `<tr>
+                        <td>${u.id}</td>
+                        <td>${u.username}</td>
+                        <td><small>${u.phone_number || '-'}<br>${u.telegram_id || '-'}</small></td>
+                        <td style="color: #f39c12; font-weight: bold;">${parseFloat(u.balance).toFixed(2)} ETB</td>
+                    </tr>`;
+                });
+                
+                html += '</tbody></table>';
+                container.innerHTML = html;
+            } catch (err) {
+                container.innerHTML = '<div style="color: #e74c3c; padding: 20px;">ስህተት ተፈጥሯል: ' + err.message + '</div>';
+            }
+        }
+
+        function openSubScreen(screenId) {
+            document.getElementById(screenId).classList.add('active');
+            if (screenId === 'deposits-screen') loadDeposits();
+            if (screenId === 'withdrawals-screen') loadWithdrawals();
+            if (screenId === 'users-screen') loadUsers();
+            if (screenId === 'high-balances-screen') loadHighBalances();
         }
 
         async function loadData() {
