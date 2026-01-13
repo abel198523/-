@@ -2168,22 +2168,16 @@ wss.on('connection', (ws) => {
                                     return;
                                 }
 
-                                // Atomic deduction of stake (TEMPORARILY DISABLED for testing)
-                                /*
+                                // Atomic deduction of stake
                                 const deductionResult = await Wallet.deductBalance(player.userId, stakeAmount, `Stake for game #${currentGameId}`, currentGameId);
                                 if (!deductionResult || !deductionResult.success) {
                                     ws.send(JSON.stringify({ type: 'error', message: 'የሒሳብ ቅነሳ አልተሳካም። በቂ ባላንስ እንዳለዎት ያረጋግጡ።' }));
                                     return;
                                 }
                                 player.balance = deductionResult.balance;
-                                */
                                 
-                                // Mock deduction for testing - don't change actual balance
-                                player.balance = totalBalance; 
-
                                 player.isCardConfirmed = true;
                                 player.selectedCardId = cardIdToConfirm;
-                                // player.balance = deductionResult.balance; // Removed for testing
 
                                 await Game.addParticipant(currentGameId, player.userId, cardIdToConfirm, stakeAmount);
 
@@ -2226,8 +2220,6 @@ wss.on('connection', (ws) => {
                                 
                                 console.log(`Bingo Validated! User ${player.userId} won ${prizeAmount} ETB (Pot: ${totalPot})`);
                                 
-                                // TEMPORARY DISABLE: Game reward disabled for testing as requested by user
-                                /*
                                 Wallet.win(player.userId, prizeAmount, gameState.id).then(() => {
                                     startWinnerDisplay({
                                         userId: player.userId,
@@ -2238,16 +2230,6 @@ wss.on('connection', (ws) => {
                                     });
                                 }).catch(err => {
                                     console.error('Error crediting win prize:', err);
-                                });
-                                */
-                                
-                                // Show winner display without crediting balance
-                                startWinnerDisplay({
-                                    userId: player.userId,
-                                    username: player.username,
-                                    telegramId: player.telegram_id || player.telegramId || '---',
-                                    cardId: player.selectedCardId,
-                                    prize: prizeAmount
                                 });
                             } else {
                                 console.log(`Bingo Rejected for ${player.username}. Numbers called: ${gameState.calledNumbers.length}`);
