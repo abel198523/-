@@ -2120,7 +2120,7 @@ wss.on('connection', (ws) => {
                             .then(res => {
                                 const row = res.rows[0];
                                 const balance = row ? parseFloat(row.balance || 0) : 0;
-                                if (balance < (gameState.stakeAmount || 10)) {
+                                if (balance < 10) {
                                     player.selectedCardId = null; // Clear local card selection
                                     ws.send(JSON.stringify({
                                         type: 'error',
@@ -2149,10 +2149,10 @@ wss.on('connection', (ws) => {
                             const totalBalance = balanceData.total;
                             const stakeAmount = gameState.stakeAmount || 10;
 
-                            if (totalBalance < stakeAmount) {
+                            if (totalBalance < 10) {
                                 ws.send(JSON.stringify({
                                     type: 'error',
-                                    message: `❌ በቂ ባላንስ የለዎትም። ለመጫወት ቢያንስ ${stakeAmount} ETB ያስፈልጋል።`
+                                    message: `❌ በቂ ባላንስ የለዎትም። ለመጫወት ቢያንስ 10 ETB ያስፈልጋል።`
                                 }));
                                 return;
                             }
